@@ -2,6 +2,7 @@ using System;
 using Terraria;
 using TShockAPI;
 using TerrariaApi.Server;
+using System.Linq;
 
 namespace TEHub
 {
@@ -19,11 +20,17 @@ namespace TEHub
 		
         public override void Initialize()
         {
+            // Commands
             Commands.ChatCommands.Add(new Command("hub.join", HubCommands.JoinGame, "join"));
             Commands.ChatCommands.Add(new Command("hub.leave", HubCommands.LeaveGame, "leave"));
 
+            // Hooks
             ServerApi.Hooks.ServerLeave.Register(this, HubHooks.OnServerLeave);
             ServerApi.Hooks.GameUpdate.Register(this, HubHooks.OnGameUpdate);
+
+            // Hub Events
+            new HubEvent("The Arctic Circle", "arcticcircle", "ac");
+            new HubEvent("TBR", "tbr");
         }
 		
         protected override void Dispose(bool disposing)

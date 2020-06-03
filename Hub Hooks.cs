@@ -14,29 +14,22 @@ namespace TEHub
 
             TSPlayer tSPlayer = TShock.Players[args.Who];
 
-            List<TSPlayer> eventPlayerInList = null;
-
-            foreach (List<TSPlayer> eventPlayerList in Variables.playersInEvents.Values)
-            {
-                bool inEvent = eventPlayerList.Any(tSP => tSP.Name == tSPlayer.Name);
-                if (inEvent)
-                {
-                    eventPlayerInList = eventPlayerList;
-                }
-            }
-
-            if (eventPlayerInList == null)
-            {
-                return;
-            }
-
-            eventPlayerInList.Remove(tSPlayer);
+            HubEvent.RemovePlayerFromEvent(tSPlayer);
         }
 
         public static void OnGameUpdate(EventArgs args)
         {
             // Auto start the game if there are enough players.
             // TODO.
+            foreach (var hubEvent in HubEvent.eventList)
+            {
+                Console.WriteLine(hubEvent.eventName);
+                foreach (var p in hubEvent.tSPlayers)
+                {
+                    Console.WriteLine(p.Name);
+                }
+                Console.WriteLine();
+            }
         }
     }
 }

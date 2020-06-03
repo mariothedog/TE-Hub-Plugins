@@ -10,14 +10,10 @@ namespace TEHub
         {
             TSPlayer tSPlayer = args.Player;
 
-            foreach (List<TSPlayer> eventPlayerList in Variables.playersInEvents.Values)
+            if (HubEvent.GetPlayerEvent(tSPlayer.Name) != null)
             {
-                bool alreadyInEvent = eventPlayerList.Any(tSP => tSP.Name == tSPlayer.Name);
-                if (alreadyInEvent)
-                {
-                    tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /join <Arctic Circle/TBR>");
-                    return;
-                }
+                tSPlayer.SendErrorMessage("You're already in an event! Please use /leave first!");
+                return;
             }
 
             if (args.Parameters.Count < 1)
@@ -28,15 +24,7 @@ namespace TEHub
 
             string eventName = string.Join("", args.Parameters).ToLower();
 
-            List<TSPlayer> eventPlayersList = new List<TSPlayer>();
-            bool eventExists = Variables.playersInEvents.TryGetValue(eventName, out eventPlayersList);
-            if (!eventExists)
-            {
-                tSPlayer.SendErrorMessage("That event does not exist! The available events are: The Arctic Circle and TBR.");
-                return;
-            }
-
-            eventPlayersList.Add(tSPlayer);
+            HubEvent.AddPlayerToEvent(tSPlayer, eventName);
 
             string eventNameFormatted = Util.CapitalizeEachWord(string.Join(" ", args.Parameters));
             tSPlayer.SendSuccessMessage(string.Format("You successfully joined {0}!", eventNameFormatted));
@@ -46,26 +34,16 @@ namespace TEHub
         {
             TSPlayer tSPlayer = args.Player;
 
-            List<TSPlayer> eventPlayerInList = null;
+            HubEvent hubEvent = HubEvent.RemovePlayerFromEvent(tSPlayer);
 
-            foreach (List<TSPlayer> eventPlayerList in Variables.playersInEvents.Values)
-            {
-                bool inEvent = eventPlayerList.Any(tSP => tSP.Name == tSPlayer.Name);
-                if (inEvent)
-                {
-                    eventPlayerInList = eventPlayerList;
-                }
-            }
-
-            if (eventPlayerInList == null)
+            if (hubEvent == null)
             {
                 tSPlayer.SendErrorMessage("You are not in an event!");
                 return;
             }
 
-            eventPlayerInList.Remove(tSPlayer);
-
-            tSPlayer.SendSuccessMessage("You were successfully removed from the event!");
+            tSPlayer.SendSuccessMessage("You were successfully removed from " + hubEvent.eventName + "!");
+            return;
         }
     }
 }
