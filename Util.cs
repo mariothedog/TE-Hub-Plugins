@@ -25,6 +25,11 @@ namespace TEHub
 
             foreach (TSPlayer tSPlayer in TShock.Players)
             {
+                if (tSPlayer == null)
+                {
+                    continue;
+                }
+
                 int similarCharacters = CountSimilarCharacters(tSPlayer.Name.ToLower(), playerName.ToLower());
 
                 if (similarCharacters > mostSimilarCharacters)

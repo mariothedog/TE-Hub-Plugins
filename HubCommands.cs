@@ -36,6 +36,17 @@ namespace TEHub
             tSPlayer.SendSuccessMessage("The config was successfully reloaded.");
         }
 
+        public static void DisplayEventParticipants(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            foreach (HubEvent hubEvent in HubEvent.eventList)
+            {
+                string players = string.Join(", ", hubEvent.tSPlayers.Select(tSP => tSP.Name)).Trim(' ', ',');
+                tSPlayer.SendSuccessMessage(hubEvent.eventName + ": " + players);
+            }
+        }
+
         public static void JoinGame(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
@@ -93,6 +104,7 @@ namespace TEHub
             if (args.Parameters.Count < 1)
             {
                 tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /forcejoinall <The Arctic Circle/TBR>");
+                return;
             }
 
             string eventName = string.Join("", args.Parameters).ToLower();
@@ -104,6 +116,8 @@ namespace TEHub
                 tSPlayer.SendErrorMessage("The event specified was not found!");
                 return;
             }
+
+            string players = "";
 
             foreach (TSPlayer tSP in TShock.Players)
             {
@@ -120,7 +134,13 @@ namespace TEHub
                 }
 
                 HubEvent.AddPlayerToEvent(tSP, hubEvent);
+
+                players += tSP.Name + ", ";
             }
+
+            players = players.Trim(' ', ',');
+
+            tSPlayer.SendSuccessMessage(string.Format("{0} was successfully added to {1}!", players, hubEvent.eventName));
         }
 
         public static void ForceJoin(CommandArgs args)
@@ -159,6 +179,8 @@ namespace TEHub
             }
 
             HubEvent.AddPlayerToEvent(tSPlayerTarget, hubEvent);
+
+            tSPlayer.SendSuccessMessage(string.Format("{0} was successfully added to {1}!", tSPlayerTarget.Name, hubEvent.eventName));
         }
     }
 }

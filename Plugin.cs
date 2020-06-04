@@ -39,7 +39,9 @@ namespace TEHub
 
         private void AddCommands()
         {
-            Commands.ChatCommands.Add(new Command("hub.help", HubCommands.HubHelp, "hubhelp") { HelpText = "Return a list of all the TE Hub commands." });
+            Commands.ChatCommands.Add(new Command("hub.help", HubCommands.HubHelp, "hubhelp") { HelpText = "Returns a list of all the TE Hub commands." });
+
+            Commands.ChatCommands.Add(new Command("hub.admin.displayevent", HubCommands.DisplayEventParticipants, "displayevents") { HelpText = "Returns a list of the events and the players who have joined." });
 
             Commands.ChatCommands.Add(new Command("hub.join", HubCommands.JoinGame, "join") { HelpText = "Join an event." });
             Commands.ChatCommands.Add(new Command("hub.leave", HubCommands.LeaveGame, "leave") { HelpText = "Leave an event." });

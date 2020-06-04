@@ -21,15 +21,6 @@ namespace TEHub
         {
             // Auto start the game if there are enough players.
             // TODO.
-            /*foreach (var hubEvent in HubEvent.eventList)
-            {
-                Console.WriteLine(hubEvent.eventName);
-                foreach (var p in hubEvent.tSPlayers)
-                {
-                    Console.WriteLine(p.Name);
-                }
-                Console.WriteLine();
-            }*/
         }
     }
 }
