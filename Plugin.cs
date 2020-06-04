@@ -33,8 +33,8 @@ namespace TEHub
             }
 
             // Hub Events
-            new HubEvent("The Arctic Circle", 6, 0, 0, "thearcticcircle", "arcticcircle", "theac", "ac");
-            new HubEvent("TBR", 6, 0, 0,  "tbr");
+            Config.config.HubEvents.Add(new HubEvent("The Arctic Circle", 1, 60000, 0, 0, "thearcticcircle", "arcticcircle", "theac", "ac"));
+            Config.config.HubEvents.Add(new HubEvent("TBR", 1, 300000, 0, 0, "tbr"));
         }
 
         private void AddCommands()

@@ -5,13 +5,6 @@ namespace TEHub
 {
     class Util
     {
-        public static string CapitalizeEachWord(string str)
-        {
-            TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
-
-            return textInfo.ToTitleCase(str);
-        }
-
         /// <summary>
         /// Returns the TSPlayer that best fits the playerName parameter.
         /// Returns null if a TSPlayer cannot be decided.

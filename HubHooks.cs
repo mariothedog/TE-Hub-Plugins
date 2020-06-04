@@ -19,8 +19,22 @@ namespace TEHub
 
         public static void OnGameUpdate(EventArgs args)
         {
-            // Auto start the game if there are enough players.
-            // TODO.
+            // Check if an event has already started.
+            HubEvent startedEvent = HubEvent.GetOngoingEvent();
+            if (startedEvent != null)
+            {
+                startedEvent.GameUpdate();
+                return;
+            }
+
+            // Start the event countdown if there are enough players.
+            foreach (HubEvent hubEvent in HubEvent.eventList)
+            {
+                if (hubEvent.tSPlayers.Count >= hubEvent.minPlayersForStart)
+                {
+                    hubEvent.StartEventCountdown();
+                }
+            }
         }
     }
 }

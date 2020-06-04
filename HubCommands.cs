@@ -75,8 +75,7 @@ namespace TEHub
 
             HubEvent.AddPlayerToEvent(tSPlayer, hubEvent);
 
-            string eventNameFormatted = Util.CapitalizeEachWord(string.Join(" ", args.Parameters));
-            tSPlayer.SendSuccessMessage(string.Format("You successfully joined {0}!", eventNameFormatted));
+            tSPlayer.SendSuccessMessage(string.Format("You successfully joined {0}!", hubEvent.eventName));
         }
 
         public static void LeaveGame(CommandArgs args)
