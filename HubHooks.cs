@@ -28,7 +28,7 @@ namespace TEHub
             }
 
             // Start the event countdown if there are enough players.
-            foreach (HubEvent hubEvent in HubEvent.eventList)
+            foreach (HubEvent hubEvent in Config.config.HubEvents)
             {
                 if (hubEvent.tSPlayers.Count >= hubEvent.minPlayersForStart)
                 {

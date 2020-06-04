@@ -9,12 +9,12 @@ namespace TEHub
 {
     public class HubEvent
     {
-        public static List<HubEvent> eventList = new List<HubEvent>();
+        //public static List<HubEvent> eventList = new List<HubEvent>();
+
+        // Note that public fields will be added to the config.
 
         private bool ongoingCountdown = false;
         private bool started = false;
-
-        // Note that public fields will be added to the config.
 
         readonly public string eventName;
         readonly public string[] useNames;
@@ -25,19 +25,26 @@ namespace TEHub
         readonly public int teleportPlayersPosX;
         readonly public int teleportPlayersPosY;
 
+        readonly public int originalMapPosX;
+        readonly public int originalMapPosY;
+
+        readonly public int playableMapPosX;
+        readonly public int playableMapPosY;
+
         readonly private EventCountdownTimer countdownTimer = new EventCountdownTimer();
+
+        readonly public double countdownLengthMS;
 
         public HubEvent(string eventName, int minPlayersForStart, double countdownLengthMS, int teleportPlayersPosX, int teleportPlayersPosY, params string[] useNames)
         {
             this.eventName = eventName;
             this.useNames = useNames;
             this.minPlayersForStart = minPlayersForStart;
+            this.countdownLengthMS = countdownLengthMS;
             countdownTimer.Interval = countdownLengthMS;
             countdownTimer.Elapsed += (sender, elapsedArgs) => StartEvent(sender, elapsedArgs);
             this.teleportPlayersPosX = teleportPlayersPosX;
             this.teleportPlayersPosY = teleportPlayersPosY;
-
-            eventList.Add(this);
         }
 
         public void StartEventCountdown()
@@ -102,7 +109,7 @@ namespace TEHub
 
         public static HubEvent GetEvent(string name)
         {
-            foreach (HubEvent hubEvent in eventList)
+            foreach (HubEvent hubEvent in Config.config.HubEvents)
             {
                 if (hubEvent.useNames.Contains(name))
                 {
@@ -115,7 +122,7 @@ namespace TEHub
 
         public static HubEvent GetEventPlayerIn(string playerName)
         {
-            foreach (HubEvent hubEvent in eventList)
+            foreach (HubEvent hubEvent in Config.config.HubEvents)
             {
                 if (hubEvent.tSPlayers.Any(tSP => tSP.Name == playerName))
                 {
@@ -128,7 +135,7 @@ namespace TEHub
 
         public static HubEvent GetOngoingEvent()
         {
-            foreach (HubEvent hubEvent in eventList)
+            foreach (HubEvent hubEvent in Config.config.HubEvents)
             {
                 if (hubEvent.started || hubEvent.ongoingCountdown)
                 {

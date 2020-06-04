@@ -29,18 +29,16 @@ namespace TEHub
         {
             TSPlayer tSPlayer = args.Player;
 
-            Config.config.Write(Config.configPath);
-
             Config.config = Config.Read(Config.configPath);
 
             tSPlayer.SendSuccessMessage("The config was successfully reloaded.");
         }
 
-        public static void DisplayEventParticipants(CommandArgs args)
+        public static void DisplayEvents(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
 
-            foreach (HubEvent hubEvent in HubEvent.eventList)
+            foreach (HubEvent hubEvent in Config.config.HubEvents)
             {
                 string players = string.Join(", ", hubEvent.tSPlayers.Select(tSP => tSP.Name)).Trim(' ', ',');
                 tSPlayer.SendSuccessMessage(hubEvent.eventName + ": " + players);

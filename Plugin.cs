@@ -31,17 +31,13 @@ namespace TEHub
             {
                 Config.config.Write(Config.configPath);
             }
-
-            // Hub Events
-            Config.config.HubEvents.Add(new HubEvent("The Arctic Circle", 1, 60000, 0, 0, "thearcticcircle", "arcticcircle", "theac", "ac"));
-            Config.config.HubEvents.Add(new HubEvent("TBR", 1, 300000, 0, 0, "tbr"));
         }
 
         private void AddCommands()
         {
             Commands.ChatCommands.Add(new Command("hub.help", HubCommands.HubHelp, "hubhelp") { HelpText = "Returns a list of all the TE Hub commands." });
 
-            Commands.ChatCommands.Add(new Command("hub.admin.displayevent", HubCommands.DisplayEventParticipants, "displayevents") { HelpText = "Returns a list of the events and the players who have joined." });
+            Commands.ChatCommands.Add(new Command("hub.admin.displayevent", HubCommands.DisplayEvents, "displayevents") { HelpText = "Returns a list of the events and the players who have joined." });
 
             Commands.ChatCommands.Add(new Command("hub.join", HubCommands.JoinGame, "join") { HelpText = "Join an event." });
             Commands.ChatCommands.Add(new Command("hub.leave", HubCommands.LeaveGame, "leave") { HelpText = "Leave an event." });
@@ -49,7 +45,7 @@ namespace TEHub
             Commands.ChatCommands.Add(new Command("hub.admin.forcejoinall", HubCommands.ForceJoinAll, "forcejoinall") { HelpText = "Force everyone to join an event." });
             Commands.ChatCommands.Add(new Command("hub.admin.forcejoin", HubCommands.ForceJoin, "forcejoin") { HelpText = "Force a player to join an event." });
 
-            Commands.ChatCommands.Add(new Command("hub.admin.reload.config", HubCommands.ReloadConfig, "reloadconfig") { HelpText = "Write to and reload the config." });
+            Commands.ChatCommands.Add(new Command("hub.admin.reload.config", HubCommands.ReloadConfig, "reloadconfig") { HelpText = "Reload the config." });
         }
 
         private void AddHooks()
