@@ -107,6 +107,11 @@ namespace TEHub
 
             foreach (TSPlayer tSP in TShock.Players)
             {
+                if (tSP == null)
+                {
+                    continue;
+                }
+
                 // Check if player has already joined an event, and if so, remove them from it
                 HubEvent playerHubEvent = HubEvent.GetEventPlayerIn(tSP.Name);
                 if (playerHubEvent != null)
