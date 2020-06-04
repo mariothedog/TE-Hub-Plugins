@@ -1,10 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>dependencies\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="OTAPI">
       <HintPath>dependencies\OTAPI.dll</HintPath>
     </Reference>

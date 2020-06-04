@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using TerrariaApi.Server;
 using TShockAPI;
 
@@ -14,14 +12,16 @@ namespace TEHub
 
             TSPlayer tSPlayer = TShock.Players[args.Who];
 
-            HubEvent.RemovePlayerFromEvent(tSPlayer);
+            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer.Name);
+
+            HubEvent.RemovePlayerFromEvent(tSPlayer, hubEvent);
         }
 
         public static void OnGameUpdate(EventArgs args)
         {
             // Auto start the game if there are enough players.
             // TODO.
-            foreach (var hubEvent in HubEvent.eventList)
+            /*foreach (var hubEvent in HubEvent.eventList)
             {
                 Console.WriteLine(hubEvent.eventName);
                 foreach (var p in hubEvent.tSPlayers)
@@ -29,7 +29,7 @@ namespace TEHub
                     Console.WriteLine(p.Name);
                 }
                 Console.WriteLine();
-            }
+            }*/
         }
     }
 }
