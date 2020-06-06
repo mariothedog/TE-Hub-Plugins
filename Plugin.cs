@@ -41,20 +41,28 @@ namespace TEHub
 
         private void AddCommands()
         {
+            // General
             Commands.ChatCommands.Add(new Command("hub.help", HubCommands.HubHelp, "hubhelp") { HelpText = "Returns a list of all the TE Hub commands." });
 
-            Commands.ChatCommands.Add(new Command("hub.admin.reload.config", HubCommands.ReloadConfig, "reloadconfig") { HelpText = "Reload the config." });
-
-            Commands.ChatCommands.Add(new Command("hub.admin.displayevent", HubCommands.DisplayEvents, "displayevents") { HelpText = "Returns a list of the events and the players who have joined." });
+            Commands.ChatCommands.Add(new Command("hub.displayevents", HubCommands.DisplayEvents, "displayevents") { HelpText = "Returns a list of the events and the players who have joined." });
 
             Commands.ChatCommands.Add(new Command("hub.join", HubCommands.JoinGame, "join") { HelpText = "Join an event." });
             Commands.ChatCommands.Add(new Command("hub.leave", HubCommands.LeaveGame, "leave") { HelpText = "Leave an event." });
 
+            Commands.ChatCommands.Add(new Command("hub.spectate", HubCommands.SpectatePlayer, "spectate") { HelpText = "Allows you to a spectate a player specified." });
+            Commands.ChatCommands.Add(new Command("hub.spectate.stop", HubCommands.StopSpectating, "stopspectating") { HelpText = "Allows you to stop spectating." });
+
+            // Admin
+            Commands.ChatCommands.Add(new Command("hub.admin.reload.config", HubCommands.ReloadConfig, "reloadconfig") { HelpText = "Reload the config." });
+
             Commands.ChatCommands.Add(new Command("hub.admin.forcejoin.all", HubCommands.ForceJoinAll, "forcejoinall") { HelpText = "Force everyone to join an event." });
             Commands.ChatCommands.Add(new Command("hub.admin.forcejoin", HubCommands.ForceJoin, "forcejoin") { HelpText = "Force a player to join an event." });
 
-            Commands.ChatCommands.Add(new Command("hub.spectate", HubCommands.SpectatePlayer, "spectate") { HelpText = "Allows you to a spectate a player specified." });
-            Commands.ChatCommands.Add(new Command("hub.spectate.stop", HubCommands.StopSpectating, "stopspectating") { HelpText = "Allows you to stop spectating." });
+            Commands.ChatCommands.Add(new Command("hub.admin.getpos", HubCommands.GetPos, "getpos") { HelpText = "Returns your position." });
+
+            Commands.ChatCommands.Add(new Command("hub.admin.addevent", HubCommands.AddEvent, "addevent") { HelpText = "Adds an event." });
+
+            Commands.ChatCommands.Add(new Command("hub.admin.resetmap", HubCommands.ResetMap, "resetmap") { HelpText = "Resets the map of the event specified back to its original state." });
         }
 
         private void AddHooks()

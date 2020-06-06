@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
+using TEHub.Extensions;
 using TerrariaApi.Server;
 using TShockAPI;
 
@@ -32,7 +33,7 @@ namespace TEHub
             {
                 TSPlayer target = Util.spectatingPlayersToTargets[tSPlayer];
                 Vector2 position = target.TPlayer.position;
-                Util.TeleportNoDust(tSPlayer, position);
+                tSPlayer.TeleportNoDust(position);
             }
 
             // Check if an event has already started.

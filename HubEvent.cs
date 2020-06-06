@@ -18,31 +18,43 @@ namespace TEHub
         readonly public string[] useNames;
         readonly public List<TSPlayer> tSPlayers = new List<TSPlayer>();
 
-        readonly public int minPlayersForStart;
-
-        readonly public int teleportPlayersPosX;
-        readonly public int teleportPlayersPosY;
-
-        readonly public int originalMapPosX;
-        readonly public int originalMapPosY;
-
-        readonly public int playableMapPosX;
-        readonly public int playableMapPosY;
+        readonly public int
+            minPlayersForStart,
+            teleportPlayersPosX, teleportPlayersPosY,
+            originalMapTopLeftPosX, originalMapTopLeftPosY,
+            originalMapBottomRightPosX, originalMapBottomRightPosY,
+            playableMapTopLeftPosX, playableMapTopLeftPosY;
 
         readonly private EventCountdownTimer countdownTimer = new EventCountdownTimer();
 
         readonly public double countdownLengthMS;
 
-        public HubEvent(string eventName, int minPlayersForStart, double countdownLengthMS, int teleportPlayersPosX, int teleportPlayersPosY, params string[] useNames)
+        public HubEvent(string eventName, string[] useNames,
+            int minPlayersForStart, double countdownLengthMS,
+            int teleportPlayersPosX, int teleportPlayersPosY,
+            int originalMapTopLeftPosX, int originalMapTopLeftPosY,
+            int originalMapBottomRightPosX, int originalMapBottomRightPosY,
+            int playableMapTopLeftPosX, int playableMapTopLeftPosY)
         {
             this.eventName = eventName;
             this.useNames = useNames;
+
             this.minPlayersForStart = minPlayersForStart;
             this.countdownLengthMS = countdownLengthMS;
             countdownTimer.Interval = countdownLengthMS;
             countdownTimer.Elapsed += (sender, elapsedArgs) => StartEvent(sender, elapsedArgs);
+
             this.teleportPlayersPosX = teleportPlayersPosX;
             this.teleportPlayersPosY = teleportPlayersPosY;
+
+            this.originalMapTopLeftPosX = originalMapTopLeftPosX;
+            this.originalMapTopLeftPosY = originalMapTopLeftPosY;
+
+            this.originalMapBottomRightPosX = originalMapBottomRightPosX;
+            this.originalMapBottomRightPosY = originalMapBottomRightPosY;
+
+            this.playableMapTopLeftPosX = playableMapTopLeftPosX;
+            this.playableMapTopLeftPosY = playableMapTopLeftPosY;
         }
 
         public void StartEventCountdown()
@@ -80,7 +92,7 @@ namespace TEHub
             MainUpdate();
         }
 
-        double secondsLeftLastBroadcast;
+        private double secondsLeftLastBroadcast;
 
         /// <summary>
         /// Game updates that occur while the countdown is still active.
@@ -103,6 +115,22 @@ namespace TEHub
         private void MainUpdate()
         {
             Console.WriteLine("Main Update");
+        }
+
+        public bool ResetMap()
+        {
+            if (!Commands.ChatCommands.Any(c => c.HasAlias("/point1")))
+            {
+                return false;
+            }
+
+            Commands.HandleCommand(TSPlayer.Server, string.Format("//point1 {0} {1}", originalMapTopLeftPosX, originalMapTopLeftPosY));
+            Commands.HandleCommand(TSPlayer.Server, string.Format("//point2 {0} {1}", originalMapBottomRightPosX, originalMapBottomRightPosY));
+            Commands.HandleCommand(TSPlayer.Server, "//copy");
+            Commands.HandleCommand(TSPlayer.Server, string.Format("//point1 {0} {1}", playableMapTopLeftPosX, playableMapTopLeftPosY));
+            Commands.HandleCommand(TSPlayer.Server, "//paste");
+
+            return true;
         }
 
         public static HubEvent GetEvent(string name)

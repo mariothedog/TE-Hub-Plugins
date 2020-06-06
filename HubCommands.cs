@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using TEHub.Extensions;
 using Terraria;
 using TShockAPI;
 
@@ -32,6 +34,10 @@ namespace TEHub
             TSPlayer tSPlayer = args.Player;
 
             Config.config = Config.Read(Config.configPath);
+            if (!File.Exists(Config.configPath))
+            {
+                Config.config.Write(Config.configPath);
+            }
 
             tSPlayer.SendSuccessMessage("The config was successfully reloaded.");
         }
@@ -226,7 +232,7 @@ namespace TEHub
             Util.spectatingPlayersToTargets.Remove(tSPlayer);
             Util.spectatingPlayersToTargets.Add(tSPlayer, tSPlayerTarget);
 
-            Util.ResetPlayer(tSPlayer);
+            tSPlayer.ResetPlayer();
 
             tSPlayer.GodMode = true;
 
@@ -241,6 +247,12 @@ namespace TEHub
             TSPlayer tSPlayer = args.Player;
             Player player = tSPlayer.TPlayer;
 
+            if (!Util.spectatingPlayersToTargets.ContainsKey(tSPlayer))
+            {
+                tSPlayer.SendErrorMessage("You are not spectating!");
+                return;
+            }
+
             TSPlayer target = Util.spectatingPlayersToTargets[tSPlayer];
 
             Util.spectatingPlayersToTargets.Remove(tSPlayer);
@@ -253,6 +265,53 @@ namespace TEHub
             NetMessage.SendData((int)PacketTypes.PlayerUpdate, -1, args.Player.Index, null, args.Player.Index);
 
             tSPlayer.SendSuccessMessage("You have stopped spectating " + target.Name + "!");
+        }
+    
+        public static void GetPos(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+            Player player = tSPlayer.TPlayer;
+
+            tSPlayer.SendInfoMessage(string.Format("You are at position X: {0}, Y: {1}!", player.position.X, player.position.Y));
+        }
+
+        public static void AddEvent(CommandArgs args)
+        {
+            // TODO
+
+            TSPlayer tSPlayer = args.Player;
+
+            tSPlayer.SendInfoMessage("This command is a work in progress!");
+        }
+
+        public static void ResetMap(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            if (args.Parameters.Count < 1)
+            {
+                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /resetmap <The Arctic Circle/TBR>");
+                return;
+            }
+
+            string eventName = string.Join("", args.Parameters).ToLower();
+
+            HubEvent hubEvent = HubEvent.GetEvent(eventName);
+
+            if (hubEvent == null)
+            {
+                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /forcejoinall <The Arctic Circle/TBR>");
+                return;
+            }
+
+            if (hubEvent.ResetMap())
+            {
+                tSPlayer.SendSuccessMessage("The map was successfully reset.");
+                return;
+            }
+
+            TShock.Log.ConsoleError("The ResetMap method was used but the WorldEdit plugin was not found!");
+            tSPlayer.SendErrorMessage("The WorldEdit plugin is required to use this command!");
         }
     }
 }
