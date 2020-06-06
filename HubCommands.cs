@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using Terraria;
 using TShockAPI;
 
 namespace TEHub
@@ -150,13 +152,21 @@ namespace TEHub
                 return;
             }
 
-            TSPlayer tSPlayerTarget = Util.GetPlayer(args.Parameters[0]);
+            List<TSPlayer> tSPlayerTargets = TSPlayer.FindByNameOrID(args.Parameters[0]);
 
-            if (tSPlayerTarget == null)
+            if (tSPlayerTargets.Count == 0)
             {
                 tSPlayer.SendErrorMessage("The player specified was not found!");
                 return;
             }
+
+            if (tSPlayerTargets.Count > 1)
+            {
+                tSPlayer.SendErrorMessage("Multiple players with that name were found!");
+                return;
+            }
+
+            TSPlayer tSPlayerTarget = tSPlayerTargets.First();
 
             string eventName = string.Join("", args.Parameters.Skip(1)).ToLower();
 
@@ -178,6 +188,71 @@ namespace TEHub
             HubEvent.AddPlayerToEvent(tSPlayerTarget, hubEvent);
 
             tSPlayer.SendSuccessMessage(string.Format("{0} was successfully added to {1}!", tSPlayerTarget.Name, hubEvent.eventName));
+        }
+    
+        public static void SpectatePlayer(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+            Player player = tSPlayer.TPlayer;
+
+            if (args.Parameters.Count < 1)
+            {
+                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /spectate <Player Name>");
+                return;
+            }
+
+            List<TSPlayer> tSPlayerTargets = TSPlayer.FindByNameOrID(args.Parameters[0]);
+
+            if (tSPlayerTargets.Count == 0)
+            {
+                tSPlayer.SendErrorMessage("The player specified was not found!");
+                return;
+            }
+
+            if (tSPlayerTargets.Count > 1)
+            {
+                tSPlayer.SendErrorMessage("Multiple players with that name were found!");
+                return;
+            }
+
+            TSPlayer tSPlayerTarget = tSPlayerTargets.First();
+
+            if (tSPlayer == tSPlayerTarget)
+            {
+                tSPlayer.SendErrorMessage("You can't spectate yourself!");
+                return;
+            }
+
+            Util.spectatingPlayersToTargets.Remove(tSPlayer);
+            Util.spectatingPlayersToTargets.Add(tSPlayer, tSPlayerTarget);
+
+            Util.ResetPlayer(tSPlayer);
+
+            tSPlayer.GodMode = true;
+
+            player.active = false;
+            NetMessage.SendData((int)PacketTypes.PlayerActive, -1, args.Player.Index, null, args.Player.Index, 0);
+
+            tSPlayer.SendSuccessMessage("You are now spectating " + tSPlayerTarget.Name + "!");
+        }
+
+        public static void StopSpectating(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+            Player player = tSPlayer.TPlayer;
+
+            TSPlayer target = Util.spectatingPlayersToTargets[tSPlayer];
+
+            Util.spectatingPlayersToTargets.Remove(tSPlayer);
+
+            tSPlayer.GodMode = false;
+
+            player.active = true;
+            NetMessage.SendData((int)PacketTypes.PlayerActive, -1, args.Player.Index, null, args.Player.Index, 1);
+            NetMessage.SendData((int)PacketTypes.PlayerInfo, -1, args.Player.Index, null, args.Player.Index);
+            NetMessage.SendData((int)PacketTypes.PlayerUpdate, -1, args.Player.Index, null, args.Player.Index);
+
+            tSPlayer.SendSuccessMessage("You have stopped spectating " + target.Name + "!");
         }
     }
 }

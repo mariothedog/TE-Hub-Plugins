@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using System;
 using TerrariaApi.Server;
 using TShockAPI;
 
@@ -14,11 +15,26 @@ namespace TEHub
 
             HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer.Name);
 
+            if (hubEvent == null)
+            {
+                return;
+            }
+
             HubEvent.RemovePlayerFromEvent(tSPlayer, hubEvent);
+
+            Util.spectatingPlayersToTargets.Remove(tSPlayer);
         }
 
-        public static void OnGameUpdate(EventArgs args)
+        public static void OnGameUpdate(EventArgs _)
         {
+            // Teleport spectating players to their targets.
+            foreach (TSPlayer tSPlayer in Util.spectatingPlayersToTargets.Keys)
+            {
+                TSPlayer target = Util.spectatingPlayersToTargets[tSPlayer];
+                Vector2 position = target.TPlayer.position;
+                Util.TeleportNoDust(tSPlayer, position);
+            }
+
             // Check if an event has already started.
             HubEvent startedEvent = HubEvent.GetOngoingEvent();
             if (startedEvent != null)

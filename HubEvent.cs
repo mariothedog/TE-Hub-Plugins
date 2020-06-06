@@ -9,8 +9,6 @@ namespace TEHub
 {
     public class HubEvent
     {
-        //public static List<HubEvent> eventList = new List<HubEvent>();
-
         // Note that public fields will be added to the config.
 
         private bool ongoingCountdown = false;
@@ -93,7 +91,7 @@ namespace TEHub
 
             if (secondsLeftLastBroadcast - secondsLeft >= 1 && (secondsLeft < 10 || secondsLeft % 10 == 0))
             {
-                TShock.Utils.Broadcast(string.Format("{0} is starting soon! {1} seconds remaining!", eventName, secondsLeft), Color.Orange);
+                TShock.Utils.Broadcast(string.Format("{0} is starting soon! {1} seconds remaining!", eventName, secondsLeft), Color.Teal);
             }
 
             secondsLeftLastBroadcast = secondsLeft;
