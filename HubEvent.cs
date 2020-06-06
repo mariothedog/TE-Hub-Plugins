@@ -52,7 +52,7 @@ namespace TEHub
             countdownTimer.Start();
 
             double secondsLeft = Math.Round(countdownTimer.TimeLeft / 1000);
-            TShock.Utils.Broadcast(string.Format("{0} is starting soon! {1} seconds remaining!", eventName, secondsLeft), Color.Orange);
+            TShock.Utils.Broadcast(string.Format("{0} is starting soon! {1} seconds remaining!", eventName, secondsLeft), Color.Teal);
         }
 
         private void StartEvent(object sender, ElapsedEventArgs elapsedArgs)
