@@ -3,7 +3,7 @@ using System.Timers;
 
 namespace TEHub
 {
-    class EventCountdownTimer : Timer
+    class CountdownTimer : Timer
     {
         private DateTime endTime;
 

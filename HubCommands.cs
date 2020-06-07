@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using TEHub.Extensions;
+using TEHub.Voting;
 using Terraria;
 using TShockAPI;
 
@@ -80,6 +82,8 @@ namespace TEHub
             }
 
             HubEvent.AddPlayerToEvent(tSPlayer, hubEvent);
+
+            hubEvent.TeleportPlayerToSpawn(tSPlayer);
 
             tSPlayer.SendSuccessMessage(string.Format("You successfully joined {0}!", hubEvent.eventName));
         }
@@ -275,11 +279,18 @@ namespace TEHub
             tSPlayer.SendInfoMessage(string.Format("You are at position X: {0}, Y: {1}!", player.position.X, player.position.Y));
         }
 
-        public static void AddEvent(CommandArgs args)
+        public static void AddEvent(CommandArgs args) // TODO
         {
-            // TODO
-
             TSPlayer tSPlayer = args.Player;
+
+            Config.config.HubEvents.Add(new HubEvent("The Arctic Circle",
+                new [] { "thearcticcircle", "arcticcircle", "arcticcircle", "theac", "ac" },
+                1,
+                60000,
+                102941, 13382,
+                6799, 249,
+                8355, 749,
+                5031, 476));
 
             tSPlayer.SendInfoMessage("This command is a work in progress!");
         }
@@ -312,6 +323,115 @@ namespace TEHub
 
             TShock.Log.ConsoleError("The ResetMap method was used but the WorldEdit plugin was not found!");
             tSPlayer.SendErrorMessage("The WorldEdit plugin is required to use this command!");
+        }
+
+        public static void Vote(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            bool multipleOngoingVotes = VotingSystem.ongoingVotes.Count() > 1;
+
+            int voteID = 1;
+
+            if (args.Parameters.Count < (multipleOngoingVotes ? 2 : 1) || !int.TryParse(args.Parameters[0], out int optionID))
+            {
+                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /vote <Option ID>" + (multipleOngoingVotes ? " <Vote ID>" : ""));
+                return;
+            }
+
+            if (multipleOngoingVotes && !int.TryParse(args.Parameters[1], out voteID))
+            {
+                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /vote <Option ID> <Vote ID>");
+                return;
+            }
+
+            VotingSystem votingSystem = VotingSystem.GetVotingSystem(voteID - 1);
+
+            if (votingSystem == null)
+            {
+                tSPlayer.SendErrorMessage("There is no ongoing vote with that vote ID!");
+                return;
+            }
+
+            if (votingSystem.voters.Contains(tSPlayer))
+            {
+                tSPlayer.SendErrorMessage("You have already voted!");
+                return;
+            }
+
+            if (!votingSystem.AddVote(tSPlayer, optionID - 1))
+            {
+                tSPlayer.SendErrorMessage("There is no option with that ID!");
+                return;
+            }
+
+            OptionInfo optionInfo = votingSystem.options[optionID - 1];
+            tSPlayer.SendSuccessMessage(string.Format("You successfully voted for \"{0}\" in \"{1}\" \"{0}\" now has {2} vote{3}!", optionInfo.option, votingSystem.question, optionInfo.votes, optionInfo.votes == 1 ? "" : "s"));
+
+            if (!votingSystem.HasEveryoneVoted())
+            {
+                return;
+            }
+
+            TShock.Utils.Broadcast("Everyone participating has voted and so the vote will conclude early.", Color.DarkOrange);
+
+            votingSystem.Stop();
+        }
+
+        public static void ForceVote(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            tSPlayer.SendInfoMessage("This command is a work in progress!");
+        }
+
+        public static void CreateVote(CommandArgs args) // TODO
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            tSPlayer.SendInfoMessage("This command is a work in progress!");
+        }
+
+        public static void StartGame(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer.Name);
+
+            if (hubEvent == null)
+            {
+                tSPlayer.SendErrorMessage("You are not in an event!");
+                return;
+            }
+
+            tSPlayer.SendSuccessMessage("You successfully started a vote to start the event!");
+
+            VotingSystem votingSystem = new VotingSystem("Should the game start?",
+                        "The vote has tied and will now be restarted.",
+                        60000,
+                        hubEvent,
+                        new OptionInfo("Yes", "Yes wins.", hubEvent.StartEventCountdown),
+                        new OptionInfo("No", "No wins."));
+            votingSystem.Start();
+        }
+
+        public static void ForceStartGame(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer.Name);
+
+            if (hubEvent == null)
+            {
+                tSPlayer.SendErrorMessage("You are not in an event!");
+                return;
+            }
+
+            tSPlayer.SendSuccessMessage("You successfully started the event!");
+
+            TShock.Utils.Broadcast("An admin has forcibly started the event!", Color.Aquamarine);
+
+            hubEvent.StartEventCountdown();
         }
     }
 }

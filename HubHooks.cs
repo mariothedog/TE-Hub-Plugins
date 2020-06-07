@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
 using TEHub.Extensions;
+using TEHub.Voting;
 using TerrariaApi.Server;
 using TShockAPI;
 
@@ -44,12 +45,26 @@ namespace TEHub
                 return;
             }
 
-            // Start the event countdown if there are enough players.
+            // Check if there is already an ongoing vote.
+            if (VotingSystem.ongoingVotes.Count > 0)
+            {
+                return;
+            }
+
+            // Start the event countdown vote if there are enough players.
             foreach (HubEvent hubEvent in Config.config.HubEvents)
             {
                 if (hubEvent.tSPlayers.Count >= hubEvent.minPlayersForStart)
                 {
-                    hubEvent.StartEventCountdown();
+                    Console.WriteLine("EEEEEEEEEEEEEEEEEEEEE EVENT STARTED!!!");
+
+                    VotingSystem votingSystem = new VotingSystem("Should the game start?",
+                        "The vote has tied and will now be restarted.",
+                        60000,
+                        hubEvent,
+                        new OptionInfo("Yes", "Yes wins.", hubEvent.StartEventCountdown),
+                        new OptionInfo("No", "No wins.", hubEvent.DeclineStart));
+                    votingSystem.Start();
                 }
             }
         }

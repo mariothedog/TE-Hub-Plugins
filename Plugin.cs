@@ -46,11 +46,15 @@ namespace TEHub
 
             Commands.ChatCommands.Add(new Command("hub.displayevents", HubCommands.DisplayEvents, "displayevents") { HelpText = "Returns a list of the events and the players who have joined." });
 
-            Commands.ChatCommands.Add(new Command("hub.join", HubCommands.JoinGame, "join") { HelpText = "Join an event." });
-            Commands.ChatCommands.Add(new Command("hub.leave", HubCommands.LeaveGame, "leave") { HelpText = "Leave an event." });
+            Commands.ChatCommands.Add(new Command("hub.join", HubCommands.JoinGame, "join") { HelpText = "Join the event specified.." });
+            Commands.ChatCommands.Add(new Command("hub.leave", HubCommands.LeaveGame, "leave") { HelpText = "Leave the event you are currently in." });
 
             Commands.ChatCommands.Add(new Command("hub.spectate", HubCommands.SpectatePlayer, "spectate") { HelpText = "Allows you to a spectate a player specified." });
             Commands.ChatCommands.Add(new Command("hub.spectate.stop", HubCommands.StopSpectating, "stopspectating") { HelpText = "Allows you to stop spectating." });
+
+            Commands.ChatCommands.Add(new Command("hub.vote", HubCommands.Vote, "vote") { HelpText = "Allows you to vote in a poll." });
+
+            Commands.ChatCommands.Add(new Command("hub.startevent", HubCommands.StartGame, "start") { HelpText = "Allows you to create a poll to start the event you are currently in." });
 
             // Admin
             Commands.ChatCommands.Add(new Command("hub.admin.reload.config", HubCommands.ReloadConfig, "reloadconfig") { HelpText = "Reload the config." });
@@ -63,6 +67,10 @@ namespace TEHub
             Commands.ChatCommands.Add(new Command("hub.admin.addevent", HubCommands.AddEvent, "addevent") { HelpText = "Adds an event." });
 
             Commands.ChatCommands.Add(new Command("hub.admin.resetmap", HubCommands.ResetMap, "resetmap") { HelpText = "Resets the map of the event specified back to its original state." });
+
+            Commands.ChatCommands.Add(new Command("hub.admin.forcestartevent", HubCommands.ForceStartGame, "forcestart") { HelpText = "Forcibly starts an event." });
+
+            Commands.ChatCommands.Add(new Command("hub.admin.createvote", HubCommands.CreateVote, "createvote") { HelpText = "Creates a poll." });
         }
 
         private void AddHooks()

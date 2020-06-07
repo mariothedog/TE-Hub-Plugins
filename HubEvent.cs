@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,13 +10,14 @@ namespace TEHub
 {
     public class HubEvent
     {
-        // Note that public fields will be added to the config.
-
         private bool ongoingCountdown = false;
         private bool started = false;
+        private bool declinedStart = false;
 
         readonly public string eventName;
         readonly public string[] useNames;
+
+        [JsonIgnore]
         readonly public List<TSPlayer> tSPlayers = new List<TSPlayer>();
 
         readonly public int
@@ -25,7 +27,7 @@ namespace TEHub
             originalMapBottomRightPosX, originalMapBottomRightPosY,
             playableMapTopLeftPosX, playableMapTopLeftPosY;
 
-        readonly private EventCountdownTimer countdownTimer = new EventCountdownTimer();
+        readonly private CountdownTimer countdownTimer = new CountdownTimer();
 
         readonly public double countdownLengthMS;
 
@@ -67,18 +69,22 @@ namespace TEHub
             TShock.Utils.Broadcast(string.Format("{0} is starting soon! {1} seconds remaining!", eventName, secondsLeft), Color.Teal);
         }
 
+        public void DeclineStart()
+        {
+            declinedStart = true;
+        }
+
         private void StartEvent(object sender, ElapsedEventArgs elapsedArgs)
         {
+            countdownTimer.Stop();
+
             started = true;
             ongoingCountdown = false;
+        }
 
-            foreach (TSPlayer tSPlayer in tSPlayers)
-            {
-                tSPlayer.Teleport(teleportPlayersPosX, teleportPlayersPosY);
-
-                // Remove player from the waiting list.
-                tSPlayers.Remove(tSPlayer);
-            }
+        public void TeleportPlayerToSpawn(TSPlayer tSPlayer)
+        {
+            tSPlayer.Teleport(teleportPlayersPosX, teleportPlayersPosY);
         }
 
         public void GameUpdate()
@@ -103,7 +109,14 @@ namespace TEHub
 
             if (secondsLeftLastBroadcast - secondsLeft >= 1 && (secondsLeft < 10 || secondsLeft % 10 == 0))
             {
-                TShock.Utils.Broadcast(string.Format("{0} is starting soon! {1} seconds remaining!", eventName, secondsLeft), Color.Teal);
+                if (secondsLeft == 0)
+                {
+                    TShock.Utils.Broadcast(string.Format("{0} is starting now!", eventName), Color.Orange);
+                }
+                else
+                {
+                    TShock.Utils.Broadcast(string.Format("{0} is starting soon! {1} seconds remaining!", eventName, secondsLeft), Color.Teal);
+                }
             }
 
             secondsLeftLastBroadcast = secondsLeft;
@@ -163,7 +176,7 @@ namespace TEHub
         {
             foreach (HubEvent hubEvent in Config.config.HubEvents)
             {
-                if (hubEvent.started || hubEvent.ongoingCountdown)
+                if (hubEvent.started || hubEvent.ongoingCountdown || hubEvent.declinedStart)
                 {
                     return hubEvent;
                 }
