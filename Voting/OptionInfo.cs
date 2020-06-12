@@ -6,13 +6,11 @@ namespace TEHub.Voting
     {
         public string option;
         public Action methodUponWin;
-        public string winMessage;
         public int votes = 0;
 
-        public OptionInfo(string option, string winMessage, Action methodUponWin = null)
+        public OptionInfo(string option, Action methodUponWin = null)
         {
             this.option = option;
-            this.winMessage = winMessage;
             this.methodUponWin = methodUponWin;
         }
     }

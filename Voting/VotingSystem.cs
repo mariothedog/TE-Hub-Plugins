@@ -12,8 +12,8 @@ namespace TEHub
     {
         public static List<VotingSystem> ongoingVotes = new List<VotingSystem>();
 
+        public int voteID;
         readonly public string question;
-        readonly public string tieMessage;
         readonly public double voteLengthMS;
         readonly public HubEvent linkedEvent;
         readonly public OptionInfo[] options;
@@ -21,11 +21,9 @@ namespace TEHub
 
         readonly private Timer voteTimer = new Timer();
 
-        public VotingSystem(string question, string tieMessage, double voteLengthMS, HubEvent linkedEvent, params OptionInfo[] options)
+        public VotingSystem(string question, double voteLengthMS, HubEvent linkedEvent, params OptionInfo[] options)
         {
             this.question = question;
-
-            this.tieMessage = tieMessage;
 
             this.linkedEvent = linkedEvent;
 
@@ -38,6 +36,7 @@ namespace TEHub
 
         public void Start()
         {
+            voteID = ongoingVotes.Count + 1; // Note that voteID: 1 would actually be the 0th index (first vote)
             ongoingVotes.Add(this);
 
             string optionsFormatted = "";
@@ -50,7 +49,7 @@ namespace TEHub
             double voteLengthSeconds = Math.Round(voteLengthMS / 1000);
 
             TShock.Utils.Broadcast(string.Format("A vote has started! {0} seconds remaining!", voteLengthSeconds), Color.Orange);
-            TShock.Utils.Broadcast("Please use /vote to participate!", Color.Orange);
+            TShock.Utils.Broadcast(string.Format("Please use /vote to participate! Vote ID: {0}", voteID), Color.Orange);
             TShock.Utils.Broadcast(question, Color.Orange);
             TShock.Utils.Broadcast(optionsFormatted, Color.Aqua);
 
@@ -67,7 +66,7 @@ namespace TEHub
 
             if (mostVotedOptions.Count() > 1)
             {
-                TShock.Utils.Broadcast(tieMessage, Color.Teal);
+                TShock.Utils.Broadcast("The vote has tied.", Color.Teal);
                 return;
             }
 
@@ -82,6 +81,21 @@ namespace TEHub
 
             TShock.Utils.Broadcast(resultsFormatted, Color.Aqua);
             TShock.Utils.Broadcast(string.Format("The winning option was \"{0}\" with {1} vote{2}!", winningOption.option, winningOption.votes, winningOption.votes == 1 ? "" : "s"), Color.Orange);
+
+            if (winningOption.methodUponWin == null)
+            {
+                return;
+            }
+
+            winningOption.methodUponWin();
+        }
+
+        public void ForceStop(OptionInfo winningOption)
+        {
+            voteTimer.Stop();
+            ongoingVotes.Remove(this);
+
+            TShock.Utils.Broadcast(string.Format("The winning option was \"{0}\"", winningOption.option), Color.Orange);
 
             if (winningOption.methodUponWin == null)
             {

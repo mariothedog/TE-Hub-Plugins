@@ -32,12 +32,45 @@ namespace TEHub.Extensions
             }
         }
 
+        public static void ResetPlayer(this TSPlayer player, int startHealth, int startMana)
+        {
+            if (Main.ServerSideCharacter)
+            {
+                ResetStats(player, startHealth, startMana);
+                ResetInventory(player);
+                ResetQuests(player);
+                ResetBanks(player);
+            }
+            else
+            {
+                TShock.Log.ConsoleError("The ResetPlayer method was called but SSC isn't enabled on this server!");
+            }
+        }
+
         public static void ResetStats(this TSPlayer player)
         {
             player.TPlayer.statLife = Plugin.startHealth;
             player.TPlayer.statLifeMax = Plugin.startHealth;
             player.TPlayer.statMana = Plugin.startMana;
             player.TPlayer.statManaMax = Plugin.startMana;
+
+            NetMessage.SendData((int)PacketTypes.PlayerInfo, -1, -1, NetworkText.FromLiteral(player.Name), player.Index, 0f, 0f, 0f, 0);
+            NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, player.Index, 0f, 0f, 0f, 0);
+            NetMessage.SendData((int)PacketTypes.PlayerHp, -1, -1, NetworkText.Empty, player.Index, 0f, 0f, 0f, 0);
+            NetMessage.SendData((int)PacketTypes.PlayerBuff, -1, -1, NetworkText.Empty, player.Index, 0f, 0f, 0f, 0);
+
+            NetMessage.SendData((int)PacketTypes.PlayerInfo, player.Index, -1, NetworkText.FromLiteral(player.Name), player.Index, 0f, 0f, 0f, 0);
+            NetMessage.SendData((int)PacketTypes.PlayerMana, player.Index, -1, NetworkText.Empty, player.Index, 0f, 0f, 0f, 0);
+            NetMessage.SendData((int)PacketTypes.PlayerHp, player.Index, -1, NetworkText.Empty, player.Index, 0f, 0f, 0f, 0);
+            NetMessage.SendData((int)PacketTypes.PlayerBuff, player.Index, -1, NetworkText.Empty, player.Index, 0f, 0f, 0f, 0);
+        }
+
+        public static void ResetStats(this TSPlayer player, int startHealth, int startMana)
+        {
+            player.TPlayer.statLife = startHealth;
+            player.TPlayer.statLifeMax = startHealth;
+            player.TPlayer.statMana = startMana;
+            player.TPlayer.statManaMax = startMana;
 
             NetMessage.SendData((int)PacketTypes.PlayerInfo, -1, -1, NetworkText.FromLiteral(player.Name), player.Index, 0f, 0f, 0f, 0);
             NetMessage.SendData((int)PacketTypes.PlayerMana, -1, -1, NetworkText.Empty, player.Index, 0f, 0f, 0f, 0);

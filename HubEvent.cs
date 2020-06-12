@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Timers;
+using TEHub.Configs;
 using TShockAPI;
 
 namespace TEHub
@@ -94,8 +95,10 @@ namespace TEHub
                 CountdownUpdate();
                 return;
             }
-
-            MainUpdate();
+            else if (started)
+            {
+                MainUpdate();
+            }
         }
 
         private double secondsLeftLastBroadcast;
@@ -148,7 +151,7 @@ namespace TEHub
 
         public static HubEvent GetEvent(string name)
         {
-            foreach (HubEvent hubEvent in Config.config.HubEvents)
+            foreach (HubEvent hubEvent in HubConfig.config.HubEvents)
             {
                 if (hubEvent.useNames.Contains(name))
                 {
@@ -161,7 +164,7 @@ namespace TEHub
 
         public static HubEvent GetEventPlayerIn(string playerName)
         {
-            foreach (HubEvent hubEvent in Config.config.HubEvents)
+            foreach (HubEvent hubEvent in HubConfig.config.HubEvents)
             {
                 if (hubEvent.tSPlayers.Any(tSP => tSP.Name == playerName))
                 {
@@ -174,7 +177,7 @@ namespace TEHub
 
         public static HubEvent GetOngoingEvent()
         {
-            foreach (HubEvent hubEvent in Config.config.HubEvents)
+            foreach (HubEvent hubEvent in HubConfig.config.HubEvents)
             {
                 if (hubEvent.started || hubEvent.ongoingCountdown || hubEvent.declinedStart)
                 {
