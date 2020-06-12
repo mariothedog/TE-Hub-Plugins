@@ -21,7 +21,6 @@ namespace TEHub
             TSPlayer tSPlayer = args.Player;
 
             string output = "";
-
             foreach (Command command in Commands.ChatCommands)
             {
                 if (command.CommandDelegate.Method.DeclaringType == Type.GetType("TEHub.HubCommands"))
