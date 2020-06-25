@@ -4,7 +4,6 @@ namespace TEHub.EventClasses
 {
     public class EventClass
     {
-        public string eventName;
         public string className;
         public int maxHealth;
         public int maxMana;

@@ -12,7 +12,7 @@ namespace TEHub.Configs
 
         public static string configPath = Path.Combine(TShock.SavePath, "classesconfig.json");
 
-        public List<EventClass> eventClasses = new List<EventClass>();
+        public Dictionary<string, List<EventClass>> eventClasses = new Dictionary<string, List<EventClass>>();
 
         public static ClassConfig Read(string path)
         {

@@ -16,16 +16,19 @@ namespace TEHub
         readonly public string question;
         readonly public double voteLengthMS;
         readonly public HubEvent linkedEvent;
+        readonly public Action methodUponTie;
         readonly public OptionInfo[] options;
         readonly public List<TSPlayer> voters = new List<TSPlayer>();
 
         readonly private Timer voteTimer = new Timer();
 
-        public VotingSystem(string question, double voteLengthMS, HubEvent linkedEvent, params OptionInfo[] options)
+        public VotingSystem(string question, double voteLengthMS, HubEvent linkedEvent, Action methodUponTie = null, params OptionInfo[] options)
         {
             this.question = question;
 
             this.linkedEvent = linkedEvent;
+
+            this.methodUponTie = methodUponTie;
 
             this.voteLengthMS = voteLengthMS;
             voteTimer.Interval = voteLengthMS;
@@ -67,6 +70,8 @@ namespace TEHub
             if (mostVotedOptions.Count() > 1)
             {
                 TShock.Utils.Broadcast("The vote has tied.", Color.Teal);
+
+                methodUponTie?.Invoke();
                 return;
             }
 
@@ -103,6 +108,12 @@ namespace TEHub
             }
 
             winningOption.methodUponWin();
+        }
+
+        public void Cancel()
+        {
+            voteTimer.Stop();
+            ongoingVotes.Remove(this);
         }
 
         public static VotingSystem GetVotingSystem(int voteID)

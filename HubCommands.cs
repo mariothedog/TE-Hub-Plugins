@@ -3,19 +3,21 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Timers;
 using TEHub.Configs;
 using TEHub.EventClasses;
 using TEHub.Extensions;
+using TEHub.Teams;
 using TEHub.Voting;
 using Terraria;
-using Terraria.Localization;
 using TShockAPI;
-using static TEHub.Util;
 
 namespace TEHub
 {
     public static class HubCommands
     {
+        public readonly static string[] allKeywords = new[] { "*", "all" };
+
         public static void HubHelp(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
@@ -34,7 +36,7 @@ namespace TEHub
             tSPlayer.SendSuccessMessage(output);
         }
 
-        public static void ReloadConfig(CommandArgs args)
+        public static void ReadConfig(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
 
@@ -50,7 +52,17 @@ namespace TEHub
                 ClassConfig.config.Write(ClassConfig.configPath);
             }
 
-            tSPlayer.SendSuccessMessage("The config was successfully reloaded.");
+            tSPlayer.SendSuccessMessage("The config was successfully read and the server has been updated!");
+        }
+
+        public static void WriteConfig(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            HubConfig.config.Write(HubConfig.configPath);
+            ClassConfig.config.Write(ClassConfig.configPath);
+
+            tSPlayer.SendSuccessMessage("The config was successfully written to and has been updated!");
         }
 
         public static void DisplayEvents(CommandArgs args)
@@ -60,15 +72,15 @@ namespace TEHub
             foreach (HubEvent hubEvent in HubConfig.config.HubEvents)
             {
                 string players = string.Join(", ", hubEvent.tSPlayers.Select(tSP => tSP.Name)).Trim(' ', ',');
-                tSPlayer.SendSuccessMessage(hubEvent.eventName + ": " + players);
+                tSPlayer.SendSuccessMessage("{0}: {1}", hubEvent.eventName, players);
             }
         }
 
-        public static void JoinGame(CommandArgs args)
+        public static void JoinEvent(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
 
-            if (HubEvent.GetEventPlayerIn(tSPlayer.Name) != null)
+            if (HubEvent.GetEventPlayerIn(tSPlayer) != null)
             {
                 tSPlayer.SendErrorMessage("You're already in an event! Please use /leave first!");
                 return;
@@ -81,27 +93,25 @@ namespace TEHub
             }
 
             string eventName = string.Join("", args.Parameters).ToLower();
-
             HubEvent hubEvent = HubEvent.GetEvent(eventName);
-
             if (hubEvent == null)
             {
-                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /forcejoinall <Event Name>");
+                tSPlayer.SendErrorMessage("That event was not found!");
                 return;
             }
 
-            HubEvent.AddPlayerToEvent(tSPlayer, hubEvent);
+            hubEvent.tSPlayers.Add(tSPlayer);
 
-            hubEvent.TeleportPlayerToSpawn(tSPlayer);
+            hubEvent.TeleportToSpawn(tSPlayer);
 
-            tSPlayer.SendSuccessMessage(string.Format("You successfully joined {0}!", hubEvent.eventName));
+            tSPlayer.SendSuccessMessage("You successfully joined {0}!", hubEvent.eventName);
         }
 
-        public static void LeaveGame(CommandArgs args)
+        public static void LeaveEvent(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
 
-            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer.Name);
+            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer);
 
             if (hubEvent == null)
             {
@@ -109,56 +119,10 @@ namespace TEHub
                 return;
             }
 
-            HubEvent.RemovePlayerFromEvent(tSPlayer, hubEvent);
+            hubEvent.tSPlayers.Remove(tSPlayer);
 
-            tSPlayer.SendSuccessMessage("You were successfully removed from " + hubEvent.eventName + "!");
+            tSPlayer.SendSuccessMessage("You were successfully removed from {0}!", hubEvent.eventName);
             return;
-        }
-
-        public static void ForceJoinAll(CommandArgs args)
-        {
-            TSPlayer tSPlayer = args.Player;
-
-            if (args.Parameters.Count < 1)
-            {
-                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /forcejoinall <Event Name>");
-                return;
-            }
-
-            string eventName = string.Join("", args.Parameters).ToLower();
-
-            HubEvent hubEvent = HubEvent.GetEvent(eventName);
-
-            if (hubEvent == null)
-            {
-                tSPlayer.SendErrorMessage("The event specified was not found!");
-                return;
-            }
-
-            string players = "";
-
-            foreach (TSPlayer tSP in TShock.Players)
-            {
-                if (tSP == null)
-                {
-                    continue;
-                }
-
-                // Check if player has already joined an event, and if so, remove them from it
-                HubEvent playerHubEvent = HubEvent.GetEventPlayerIn(tSP.Name);
-                if (playerHubEvent != null)
-                {
-                    HubEvent.RemovePlayerFromEvent(tSP, playerHubEvent);
-                }
-
-                HubEvent.AddPlayerToEvent(tSP, hubEvent);
-
-                players += tSP.Name + ", ";
-            }
-
-            players = players.Trim(' ', ',');
-
-            tSPlayer.SendSuccessMessage(string.Format("{0} was successfully added to {1}!", players, hubEvent.eventName));
         }
 
         public static void ForceJoin(CommandArgs args)
@@ -171,21 +135,27 @@ namespace TEHub
                 return;
             }
 
-            List<TSPlayer> tSPlayerTargets = TSPlayer.FindByNameOrID(args.Parameters[0]);
-
-            if (tSPlayerTargets.Count == 0)
+            List<TSPlayer> tSPlayerTargets;
+            if (allKeywords.Contains(args.Parameters[0]))
             {
-                tSPlayer.SendErrorMessage("The player specified was not found!");
-                return;
+                tSPlayerTargets = TShock.Players.ToList();
             }
-
-            if (tSPlayerTargets.Count > 1)
+            else
             {
-                tSPlayer.SendErrorMessage("Multiple players with that name were found!");
-                return;
-            }
+                tSPlayerTargets = TSPlayer.FindByNameOrID(args.Parameters[0]);
 
-            TSPlayer tSPlayerTarget = tSPlayerTargets.First();
+                if (tSPlayerTargets.Count == 0)
+                {
+                    tSPlayer.SendErrorMessage("The player specified was not found!");
+                    return;
+                }
+
+                if (tSPlayerTargets.Count > 1)
+                {
+                    tSPlayer.SendErrorMessage("Multiple players with that name were found!");
+                    return;
+                }
+            }
 
             string eventName = string.Join("", args.Parameters.Skip(1)).ToLower();
 
@@ -197,26 +167,132 @@ namespace TEHub
                 return;
             }
 
-            // Check if player has already joined an event, and if so, remove them from it
-            HubEvent playerHubEvent = HubEvent.GetEventPlayerIn(tSPlayerTarget.Name);
-            if (playerHubEvent != null)
+            List<TSPlayer> tSPlayersSuccessfullyJoined = new List<TSPlayer>();
+            foreach (TSPlayer tSPlayerTarget in tSPlayerTargets)
             {
-                HubEvent.RemovePlayerFromEvent(tSPlayerTarget, playerHubEvent);
+                if (tSPlayerTarget == null || !tSPlayerTarget.Active)
+                {
+                    tSPlayer.SendErrorMessage("A player failed to join.");
+                    continue;
+                }
+
+                HubEvent playerHubEvent = HubEvent.GetEventPlayerIn(tSPlayerTarget);
+
+                if (playerHubEvent == hubEvent) // Skip player if they are already in the event
+                {
+                    continue;
+                }
+
+                if (playerHubEvent != null) // Remove player from the event they are currently in if they are in one
+                {
+                    playerHubEvent.tSPlayers.Remove(tSPlayerTarget);
+                }
+
+                hubEvent.tSPlayers.Add(tSPlayerTarget);
+
+                tSPlayersSuccessfullyJoined.Add(tSPlayerTarget);
+
+                tSPlayerTarget.SendSuccessMessage("You were forcibly added to {0}!", hubEvent.eventName);
+            }
+            
+            
+            if (tSPlayersSuccessfullyJoined.Count == 0)
+            {
+                tSPlayer.SendSuccessMessage("Nobody was added to {0}.".SFormat(hubEvent.eventName));
+                return;
             }
 
-            HubEvent.AddPlayerToEvent(tSPlayerTarget, hubEvent);
+            tSPlayer.SendSuccessMessage("{0} was successfully added to {1}!".SFormat(string.Join(", ", tSPlayersSuccessfullyJoined.Select(p => p.Name)), hubEvent.eventName));
+        }
 
-            tSPlayer.SendSuccessMessage(string.Format("{0} was successfully added to {1}!", tSPlayerTarget.Name, hubEvent.eventName));
+        public static void ForceLeave(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            if (args.Parameters.Count < 1)
+            {
+                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /forceleave <Player Name>");
+                return;
+            }
+
+            List<TSPlayer> tSPlayerTargets;
+            if (allKeywords.Contains(args.Parameters[0]))
+            {
+                tSPlayerTargets = TShock.Players.ToList();
+            }
+            else
+            {
+                tSPlayerTargets = TSPlayer.FindByNameOrID(args.Parameters[0]);
+
+                if (tSPlayerTargets.Count == 0)
+                {
+                    tSPlayer.SendErrorMessage("The player specified was not found!");
+                    return;
+                }
+
+                if (tSPlayerTargets.Count > 1)
+                {
+                    tSPlayer.SendErrorMessage("Multiple players with that name were found!");
+                    return;
+                }
+            }
+
+            string eventName = string.Join("", args.Parameters.Skip(1)).ToLower();
+
+            List<TSPlayer> tSPlayersSuccessfullyKicked = new List<TSPlayer>();
+            foreach (TSPlayer tSPlayerTarget in tSPlayerTargets)
+            {
+                if (tSPlayerTarget == null || !tSPlayerTarget.Active)
+                {
+                    tSPlayer.SendErrorMessage("A player failed to leave.");
+                    continue;
+                }
+
+                // Check if player has already joined an event, and if so, remove them from it
+                HubEvent playerHubEvent = HubEvent.GetEventPlayerIn(tSPlayerTarget);
+
+                if (playerHubEvent == null)
+                {
+                    continue;
+                }
+
+                playerHubEvent.tSPlayers.Remove(tSPlayer);
+
+                tSPlayersSuccessfullyKicked.Add(tSPlayerTarget);
+
+                tSPlayerTarget.SendSuccessMessage("You were forcibly removed from {0}!", playerHubEvent.eventName);
+            }
+
+            tSPlayer.SendSuccessMessage("{0} was successfully removed from their events!", string.Join(", ", tSPlayersSuccessfullyKicked.Select(p => p.Name)));
         }
     
         public static void SpectatePlayer(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
-            Player player = tSPlayer.TPlayer;
+            Player player = args.TPlayer;
 
             if (args.Parameters.Count < 1)
             {
-                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /spectate <Player Name>");
+                // Stop spectating
+                if (!Util.spectatingPlayersToTargets.ContainsKey(tSPlayer))
+                {
+                    tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /spectate <Player Name>");
+                    return;
+                }
+
+                TSPlayer target = Util.spectatingPlayersToTargets[tSPlayer];
+
+                Util.spectatingPlayersToTargets.Remove(tSPlayer);
+
+                tSPlayer.GodMode = false;
+
+                player.active = true;
+                NetMessage.SendData((int)PacketTypes.PlayerActive, -1, args.Player.Index, null, args.Player.Index, 1);
+                NetMessage.SendData((int)PacketTypes.PlayerInfo, -1, args.Player.Index, null, args.Player.Index);
+                NetMessage.SendData((int)PacketTypes.PlayerUpdate, -1, args.Player.Index, null, args.Player.Index);
+
+                tSPlayer.SendSuccessMessage("You have stopped spectating " + target.Name + "!");
+
                 return;
             }
 
@@ -242,7 +318,7 @@ namespace TEHub
                 return;
             }
 
-            Util.spectatingPlayersToTargets.Remove(tSPlayer);
+            Util.spectatingPlayersToTargets.Remove(tSPlayer); // If player is already spectating - For when someone wants to swap the player they're spectating with another player
             Util.spectatingPlayersToTargets.Add(tSPlayer, tSPlayerTarget);
 
             tSPlayer.ResetPlayer();
@@ -252,40 +328,15 @@ namespace TEHub
             player.active = false;
             NetMessage.SendData((int)PacketTypes.PlayerActive, -1, args.Player.Index, null, args.Player.Index, 0);
 
-            tSPlayer.SendSuccessMessage("You are now spectating " + tSPlayerTarget.Name + "!");
-        }
-
-        public static void StopSpectating(CommandArgs args)
-        {
-            TSPlayer tSPlayer = args.Player;
-            Player player = tSPlayer.TPlayer;
-
-            if (!Util.spectatingPlayersToTargets.ContainsKey(tSPlayer))
-            {
-                tSPlayer.SendErrorMessage("You are not spectating!");
-                return;
-            }
-
-            TSPlayer target = Util.spectatingPlayersToTargets[tSPlayer];
-
-            Util.spectatingPlayersToTargets.Remove(tSPlayer);
-
-            tSPlayer.GodMode = false;
-
-            player.active = true;
-            NetMessage.SendData((int)PacketTypes.PlayerActive, -1, args.Player.Index, null, args.Player.Index, 1);
-            NetMessage.SendData((int)PacketTypes.PlayerInfo, -1, args.Player.Index, null, args.Player.Index);
-            NetMessage.SendData((int)PacketTypes.PlayerUpdate, -1, args.Player.Index, null, args.Player.Index);
-
-            tSPlayer.SendSuccessMessage("You have stopped spectating " + target.Name + "!");
+            tSPlayer.SendSuccessMessage("You are now spectating {0}!", tSPlayerTarget.Name);
         }
     
         public static void GetPos(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
-            Player player = tSPlayer.TPlayer;
+            Player player = args.TPlayer;
 
-            tSPlayer.SendInfoMessage(string.Format("You are at position X: {0}, Y: {1}!", player.position.X, player.position.Y));
+            tSPlayer.SendInfoMessage("You are at position X: {0}, Y: {1}!", player.position.X, player.position.Y);
         }
 
         public static void AddEvent(CommandArgs args)
@@ -300,14 +351,7 @@ namespace TEHub
 
             string eventName = args.Parameters[0];
 
-            HubConfig.config.HubEvents.Add(new HubEvent(eventName,
-                null,
-                0,
-                0,
-                0, 0,
-                0, 0,
-                0, 0,
-                0, 0));
+            HubConfig.config.HubEvents.Add(new HubEvent(eventName));
 
             tSPlayer.SendInfoMessage("The event has been successfully added! Please edit the config to customize it.");
         }
@@ -328,18 +372,18 @@ namespace TEHub
 
             if (hubEvent == null)
             {
-                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /forcejoinall <Event Name>");
+                tSPlayer.SendErrorMessage("That event was not found!");
                 return;
             }
 
-            if (hubEvent.ResetMap())
+            if (!hubEvent.ResetMap())
             {
-                tSPlayer.SendSuccessMessage("The map was successfully reset.");
+                TShock.Log.ConsoleError("The ResetMap method was used but the WorldEdit plugin was not found!");
+                tSPlayer.SendErrorMessage("The WorldEdit plugin is required to use this command!");
                 return;
             }
 
-            TShock.Log.ConsoleError("The ResetMap method was used but the WorldEdit plugin was not found!");
-            tSPlayer.SendErrorMessage("The WorldEdit plugin is required to use this command!");
+            tSPlayer.SendSuccessMessage("The map was successfully reset.");
         }
 
         public static void Vote(CommandArgs args)
@@ -383,7 +427,8 @@ namespace TEHub
             }
 
             OptionInfo optionInfo = votingSystem.options[optionID - 1];
-            tSPlayer.SendSuccessMessage(string.Format("You successfully voted for \"{0}\" in \"{1}\" \"{0}\" now has {2} vote{3}!", optionInfo.option, votingSystem.question, optionInfo.votes, optionInfo.votes == 1 ? "" : "s"));
+            tSPlayer.SendSuccessMessage("You successfully voted for \"{0}\" in \"{1}\".", optionInfo.option, votingSystem.question);
+            TShock.Utils.Broadcast("{0} now has {1} vote{2}!".SFormat(optionInfo.option, optionInfo.votes, optionInfo.votes == 1 ? "" : "s"), Color.Orange);
 
             if (!votingSystem.HasEveryoneVoted())
             {
@@ -395,7 +440,7 @@ namespace TEHub
             votingSystem.Stop();
         }
 
-        public static void ForceVote(CommandArgs args)
+        public static void EndVote(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
 
@@ -405,13 +450,13 @@ namespace TEHub
 
             if (args.Parameters.Count < (multipleOngoingVotes ? 2 : 1) || !int.TryParse(args.Parameters[0], out int optionID))
             {
-                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /forcevote <Option ID>" + (multipleOngoingVotes ? " <Vote ID>" : ""));
+                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /endvote <Option ID>" + (multipleOngoingVotes ? " <Vote ID>" : ""));
                 return;
             }
 
             if (multipleOngoingVotes && !int.TryParse(args.Parameters[1], out voteID))
             {
-                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /forcevote <Option ID> <Vote ID>");
+                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /endvote <Option ID> <Vote ID>");
                 return;
             }
 
@@ -430,9 +475,9 @@ namespace TEHub
             }
 
             OptionInfo optionInfo = votingSystem.options[optionID - 1];
-            tSPlayer.SendSuccessMessage(string.Format("You successfully forcevoted for \"{0}\" in \"{1}\"!", optionInfo.option, votingSystem.question));
+            tSPlayer.SendSuccessMessage("You successfully ended the \"{0}\" vote with \"{1}\" as the winner!", votingSystem.question, optionInfo.option);
 
-            TShock.Utils.Broadcast(string.Format("{0} forcevoted and so the vote will conclude early.", tSPlayer.Name), Color.DarkOrange);
+            TShock.Utils.Broadcast("{0} has forcibly ended the vote.".SFormat(tSPlayer.Name), Color.DarkOrange);
 
             votingSystem.ForceStop(optionInfo);
         }
@@ -467,6 +512,7 @@ namespace TEHub
             VotingSystem votingSystem = new VotingSystem(question,
                         voteLengthMS,
                         null,
+                        null,
                         optionInfos.ToArray());
 
             tSPlayer.SendSuccessMessage("The vote was successfully created!");
@@ -474,51 +520,49 @@ namespace TEHub
             votingSystem.Start();
         }
 
-        public static void StartGame(CommandArgs args)
+        public static void ForceStartEvent(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
 
-            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer.Name);
+            HubEvent hubEvent;
 
-            if (hubEvent == null)
+            if (args.Parameters.Count < 1)
             {
-                tSPlayer.SendErrorMessage("You are not in an event!");
+                hubEvent = HubEvent.GetEventPlayerIn(tSPlayer);
+
+                if (hubEvent == null)
+                {
+                    tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /start <Event Name>");
+                    return;
+                }
+            }
+            else
+            {
+                string eventName = string.Join("", args.Parameters).ToLower();
+
+                hubEvent = HubEvent.GetEvent(eventName);
+
+                if (hubEvent == null)
+                {
+                    tSPlayer.SendErrorMessage("That event was not found!");
+                    return;
+                }
+            }
+
+            if (hubEvent.ongoingCountdown || hubEvent.started)
+            {
+                tSPlayer.SendErrorMessage("That event has already started!");
                 return;
             }
 
-            tSPlayer.SendSuccessMessage("You successfully started a vote to start the event!");
-
-            VotingSystem votingSystem = new VotingSystem("Should the game start?",
-                        60000,
-                        hubEvent,
-                        new OptionInfo("Yes", hubEvent.StartEventCountdown),
-                        new OptionInfo("No"));
-            votingSystem.Start();
-        }
-
-        public static void ForceStartGame(CommandArgs args)
-        {
-            TSPlayer tSPlayer = args.Player;
-
-            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer.Name);
-
-            if (hubEvent == null)
-            {
-                tSPlayer.SendErrorMessage("You are not in an event!");
-                return;
-            }
-
-            tSPlayer.SendSuccessMessage("You successfully started the event!");
-
-            TShock.Utils.Broadcast("An admin has forcibly started the event!", Color.Aquamarine);
-
+            tSPlayer.SendSuccessMessage("{0} was successfully started!", hubEvent.eventName);
             hubEvent.StartEventCountdown();
         }
     
         public static void AddClass(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
-            Player player = tSPlayer.TPlayer;
+            Player player = args.TPlayer;
 
             if (args.Parameters.Count < 2)
             {
@@ -541,7 +585,6 @@ namespace TEHub
             EventClass eventClass = new EventClass
             {
                 className = className,
-                eventName = hubEvent.eventName,
                 maxHealth = player.statLifeMax2,
                 maxMana = player.statManaMax2,
             };
@@ -562,18 +605,18 @@ namespace TEHub
                     prefix = TShock.Utils.GetPrefixById(item.prefix)
                 };
 
-                if (i <= (int)ItemSlot.InvRow5Slot10)
+                if (i <= (int)Util.ItemSlot.InvRow5Slot10)
                 {
                     eventClass.items[i] = classItem;
                 }
-                else if (i <= (int)ItemSlot.CoinSlot4)
+                else if (i <= (int)Util.ItemSlot.CoinSlot4)
                 {
-                    int index = i - (int)ItemSlot.CoinSlot1;
+                    int index = i - (int)Util.ItemSlot.CoinSlot1;
                     eventClass.coins[index] = classItem;
                 }
                 else
                 {
-                    int index = i - (int)ItemSlot.AmmoSlot1;
+                    int index = i - (int)Util.ItemSlot.AmmoSlot1;
                     eventClass.ammo[index] = classItem;
                 }
             }
@@ -587,23 +630,23 @@ namespace TEHub
                     continue;
                 }
 
-                if (i < (int)InventoryLengths.Armor)
+                if (i < (int)Util.InventoryLengths.Armor)
                 {
                     eventClass.armor[i] = item.Name;
                 }
-                else if (i < (int)InventoryLengths.Armor + (int)InventoryLengths.Accessories)
+                else if (i < (int)Util.InventoryLengths.Armor + (int)Util.InventoryLengths.Accessories)
                 {
-                    int index = i - (int)InventoryLengths.Armor;
+                    int index = i - (int)Util.InventoryLengths.Armor;
                     eventClass.accessories[index] = item.Name;
                 }
-                else if (i < (int)InventoryLengths.Armor + (int)InventoryLengths.AllAccessories + (int)InventoryLengths.Armor)
+                else if (i < (int)Util.InventoryLengths.Armor + (int)Util.InventoryLengths.AllAccessories + (int)Util.InventoryLengths.Armor)
                 {
-                    int index = i - ((int)InventoryLengths.Armor + (int)InventoryLengths.AllAccessories);
+                    int index = i - ((int)Util.InventoryLengths.Armor + (int)Util.InventoryLengths.AllAccessories);
                     eventClass.armorVanity[index] = item.Name;
                 }
                 else
                 {
-                    int index = i - ((int)InventoryLengths.Armor + (int)InventoryLengths.AllAccessories + (int)InventoryLengths.Armor);
+                    int index = i - ((int)Util.InventoryLengths.Armor + (int)Util.InventoryLengths.AllAccessories + (int)Util.InventoryLengths.Armor);
                     eventClass.accessoryVanity[index] = item.Name;
                 }
             }
@@ -617,13 +660,13 @@ namespace TEHub
                     continue;
                 }
 
-                if (i < (int)InventoryLengths.Armor)
+                if (i < (int)Util.InventoryLengths.Armor)
                 {
                     eventClass.armorDyes[i] = item.Name;
                 }
                 else
                 {
-                    int index = i - (int)InventoryLengths.Armor;
+                    int index = i - (int)Util.InventoryLengths.Armor;
                     eventClass.accessoryDyes[index] = item.Name;
                 }
             }
@@ -652,7 +695,7 @@ namespace TEHub
                 eventClass.miscEquipDyes[i] = item.Name;
             }
 
-            ClassConfig.config.eventClasses.Add(eventClass);
+            ClassConfig.config.eventClasses[hubEvent.eventName].Add(eventClass);
 
             tSPlayer.SendSuccessMessage("The " + className + " class was successfully added!");
         }
@@ -660,7 +703,7 @@ namespace TEHub
         public static void ChooseClass(CommandArgs args)
         {
             TSPlayer tSPlayer = args.Player;
-            Player player = tSPlayer.TPlayer;
+            Player player = args.TPlayer;
 
             if (!TShock.ServerSideCharacterConfig.Enabled)
             {
@@ -668,7 +711,7 @@ namespace TEHub
                 return;
             }
 
-            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer.Name);
+            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer);
 
             if (hubEvent == null)
             {
@@ -676,11 +719,15 @@ namespace TEHub
                 return;
             }
 
-            IEnumerable<EventClass> eventClasses = ClassConfig.config.eventClasses.Where(c => c.eventName == hubEvent.eventName);
-
-            if (eventClasses.Count() < 1)
+            if (!ClassConfig.config.eventClasses.TryGetValue(hubEvent.eventName, out List<EventClass> eventClasses) || eventClasses.Count < 1)
             {
                 tSPlayer.SendErrorMessage("This event has no classes.");
+                return;
+            }
+
+            if (!hubEvent.canChooseClasses)
+            {
+                tSPlayer.SendErrorMessage("You can no longer choose a class!");
                 return;
             }
 
@@ -695,7 +742,7 @@ namespace TEHub
                 }
                 classesFormatted = classesFormatted.TrimEnd(',', ' ');
 
-                tSPlayer.SendInfoMessage(string.Format("The available classes for {0} are: {1}.", hubEvent.eventName, classesFormatted));
+                tSPlayer.SendInfoMessage("The available classes for {0} are: {1}.", hubEvent.eventName, classesFormatted);
 
                 return;
             }
@@ -715,7 +762,7 @@ namespace TEHub
                 }
                 classesFormatted = classesFormatted.TrimEnd(',', ' ');
 
-                tSPlayer.SendInfoMessage(string.Format("Try \"/chooseclass [c/FFFF00: {0}] instead.\"", classesFormatted));
+                tSPlayer.SendInfoMessage("Try \"/chooseclass [c/FFFF00:{0}] instead.\"", classesFormatted);
                 return;
             }
 
@@ -727,158 +774,59 @@ namespace TEHub
 
             EventClass chosenClass = classes.First();
 
-            tSPlayer.ResetPlayer(chosenClass.maxHealth, chosenClass.maxMana);
-
-            // Main items
-            for (int i = 0; i < (int)InventoryLengths.Main; i++)
-            {
-                if (!chosenClass.items.TryGetValue(i, out ClassItem classItem))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(classItem.name).First();
-                item.stack = classItem.stack;
-                item.prefix = (byte)TShock.Utils.GetPrefixByIdOrName(classItem.prefix).First();
-
-                player.inventory[i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, i);
-            }
-
-            // Coins
-            for (int i = 0; i < (int)InventoryLengths.Coins; i++)
-            {
-                if (!chosenClass.coins.TryGetValue(i, out ClassItem classItem))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(classItem.name).First();
-                item.stack = classItem.stack;
-                item.prefix = (byte)TShock.Utils.GetPrefixByIdOrName(classItem.prefix).First();
-
-                player.inventory[(int)ItemSlot.CoinSlot1 + i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.CoinSlot1 + i);
-            }
-
-            // Ammo
-            for (int i = 0; i < (int)InventoryLengths.Ammo; i++)
-            {
-                if (!chosenClass.ammo.TryGetValue(i, out ClassItem classItem))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(classItem.name).First();
-                item.stack = classItem.stack;
-                item.prefix = (byte)TShock.Utils.GetPrefixByIdOrName(classItem.prefix).First();
-
-                player.inventory[(int)ItemSlot.AmmoSlot1 + i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.AmmoSlot1 + i);
-            }
-            
-            // Armor
-            for (int i = 0; i < (int)InventoryLengths.Armor; i++)
-            {
-                if (!chosenClass.armor.TryGetValue(i, out string itemName))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(itemName).First();
-
-                player.armor[i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.ArmorHeadSlot + i);
-            }
-
-            // Accessories
-            for (int i = 0; i < (int)InventoryLengths.Accessories; i++)
-            {
-                if (!chosenClass.accessories.TryGetValue(i, out string itemName))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(itemName).First();
-
-                player.armor[(int)InventoryLengths.Armor + i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.AccessorySlot1 + i);
-            }
-
-            // Armor Vanity
-            for (int i = 0; i < (int)InventoryLengths.Armor; i++)
-            {
-                if (!chosenClass.armorVanity.TryGetValue(i, out string itemName))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(itemName).First();
-
-                player.armor[(int)InventoryLengths.Armor + (int)InventoryLengths.AllAccessories + i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.VanityHeadSlot + i);
-            }
-
-            // Accessory Vanity
-            for (int i = 0; i < (int)InventoryLengths.Accessories; i++)
-            {
-                if (!chosenClass.accessoryVanity.TryGetValue(i, out string itemName))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(itemName).First();
-
-                player.armor[(int)InventoryLengths.Armor + (int)InventoryLengths.AllAccessories + (int)InventoryLengths.Armor + i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.SocialAccessorySlot1 + i);
-            }
-
-            // Armor Dyes
-            for (int i = 0; i < (int)InventoryLengths.Armor; i++)
-            {
-                if (!chosenClass.armorDyes.TryGetValue(i, out string itemName))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(itemName).First();
-
-                player.dye[i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.DyeHeadSlot + i);
-            }
-
-            // Accessory Dyes
-            for (int i = 0; i < (int)InventoryLengths.Accessories; i++)
-            {
-                if (!chosenClass.accessoryDyes.TryGetValue(i, out string itemName))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(itemName).First();
-
-                player.dye[(int)InventoryLengths.Armor + i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.DyeAccessorySlot1 + i);
-            }
-
-            // Misc Equips
-            for (int i = 0; i < (int)InventoryLengths.MiscEquips; i++)
-            {
-                if (!chosenClass.miscEquips.TryGetValue(i, out string itemName))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(itemName).First();
-
-                player.miscEquips[i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.EquipmentSlot1 + i);
-            }
-
-            // Misc Equip Dyes
-            for (int i = 0; i < (int)InventoryLengths.MiscEquips; i++)
-            {
-                if (!chosenClass.miscEquipDyes.TryGetValue(i, out string itemName))
-                {
-                    continue;
-                }
-                Item item = TShock.Utils.GetItemByIdOrName(itemName).First();
-
-                player.miscDyes[i] = item;
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.DyeEquipmentSlot1 + i);
-            }
+            hubEvent.tSPlayersWithAClass[tSPlayer] = chosenClass;
 
             tSPlayer.SendSuccessMessage(string.Format("{0} class chosen!", chosenClass.className));
+        }
+    
+        public static void EndRound(CommandArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            if (args.Parameters.Count < 2)
+            {
+                tSPlayer.SendErrorMessage("Invalid syntax! Proper syntax: /endround <Event Name> <Winning Team Name>");
+                return;
+            }
+
+            string eventName = args.Parameters[0].ToLower();
+            string winningTeamName = args.Parameters[1].ToLower();
+
+            HubEvent hubEvent = HubEvent.GetEvent(eventName);
+
+            if (hubEvent == null)
+            {
+                tSPlayer.SendErrorMessage("That event was not found!");
+                return;
+            }
+            else if (hubEvent.resetPending)
+            {
+                tSPlayer.SendErrorMessage("That event is already restarting!");
+                return;
+            }
+            else if (!hubEvent.started)
+            {
+                tSPlayer.SendErrorMessage("That event hasn't started!");
+                return;
+            }
+
+            EventTeam winningTeam = hubEvent.GetTeam(winningTeamName);
+
+            if (winningTeam == null)
+            {
+                tSPlayer.SendErrorMessage("That team was not found!");
+                return;
+            }
+
+            TShock.Utils.Broadcast(string.Format("{0} TEAM HAS WON THE ROUND OF {1}!", winningTeam.name.ToUpper(), hubEvent.eventName.ToUpper()), Color.Aqua);
+
+            // Delay so there is time for the explosives to kill players
+            Timer timer = new Timer(2000)
+            {
+                AutoReset = false
+            };
+            timer.Elapsed += (sender, elapsedArgs) => hubEvent.ResetEvent();
+            timer.Start();
         }
     }
 }

@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace TEHub.EventClasses
+﻿namespace TEHub.EventClasses
 {
     public class ClassItem
     {

@@ -5,7 +5,7 @@ using TShockAPI;
 
 namespace TEHub.Extensions
 {
-	public static class TSPlayerExtension
+    public static class TSPlayerExtension
     {
 		public static void TeleportNoDust(this TSPlayer tSPlayer, Vector2 pos)
 		{
@@ -16,7 +16,14 @@ namespace TEHub.Extensions
 			NetMessage.SendData((int)PacketTypes.Teleport, -1, -1, NetworkText.Empty, 0, tSPlayer.TPlayer.whoAmI, pos.X, pos.Y, -1);
 		}
 
+        public static void ForcePvP(this TSPlayer tSPlayer, bool on)
+        {
+            tSPlayer.TPlayer.hostile = on;
+            NetMessage.SendData((int)PacketTypes.TogglePvp, -1, -1, NetworkText.Empty, tSPlayer.Index);
+        }
+
         // Credit to: https://tshock.co/xf/index.php?resources/character-reset-ssc.4/
+        #region Reset Player
         public static void ResetPlayer(this TSPlayer player)
         {
             if (Main.ServerSideCharacter)
@@ -219,6 +226,19 @@ namespace TEHub.Extensions
             {
                 NetMessage.SendData((int)PacketTypes.PlayerSlot, player.Index, -1, NetworkText.Empty, player.Index, (float)k, 0f, 0f, 0);
             }
+        }
+        #endregion
+
+        // TODO - Make this work for any slot
+        public static void SetAccessory(this TSPlayer tSPlayer, int slot, int itemID, byte prefix = (byte)Util.ItemPrefix.None, int stack = 1)
+        {
+            Player player = tSPlayer.TPlayer;
+
+            Item item = TShock.Utils.GetItemById(itemID);
+            item.prefix = prefix;
+            item.stack = stack;
+            player.armor[(int)Util.InventoryLengths.Armor + slot] = item;
+            NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)Util.ItemSlot.AccessorySlot1 + slot);
         }
     }
 }
