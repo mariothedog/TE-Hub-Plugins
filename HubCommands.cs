@@ -774,7 +774,9 @@ namespace TEHub
 
             EventClass chosenClass = classes.First();
 
-            hubEvent.tSPlayersWithAClass[tSPlayer] = chosenClass;
+            hubEvent.tSPlayersWithAClass[tSPlayer.Name] = chosenClass;
+
+            Util.DebugStuff(hubEvent);
 
             tSPlayer.SendSuccessMessage(string.Format("{0} class chosen!", chosenClass.className));
         }
@@ -801,7 +803,7 @@ namespace TEHub
             }
             else if (hubEvent.resetPending)
             {
-                tSPlayer.SendErrorMessage("That event is already restarting!");
+                tSPlayer.SendErrorMessage("That event is already ending!");
                 return;
             }
             else if (!hubEvent.started)
@@ -818,7 +820,13 @@ namespace TEHub
                 return;
             }
 
-            TShock.Utils.Broadcast(string.Format("{0} TEAM HAS WON THE ROUND OF {1}!", winningTeam.name.ToUpper(), hubEvent.eventName.ToUpper()), Color.Aqua);
+            if (hubEvent.GetTeamPlayerIn(tSPlayer) == winningTeam)
+            {
+                tSPlayer.SendErrorMessage("You can't make your own team lose!");
+                return;
+            }
+
+            TShock.Utils.Broadcast(string.Format("{0} TEAM HAS WON THE ROUND OF {1} THANKS TO {2}!", winningTeam.name.ToUpper(), hubEvent.eventName.ToUpper(), tSPlayer.Name.ToUpper()), Color.Aqua);
 
             // Delay so there is time for the explosives to kill players
             Timer timer = new Timer(2000)
@@ -827,6 +835,29 @@ namespace TEHub
             };
             timer.Elapsed += (sender, elapsedArgs) => hubEvent.ResetEvent();
             timer.Start();
+
+            hubEvent.resetPending = true;
+        }
+
+        public static void TPPosNoMessage(CommandArgs args)
+        {
+            if (args.Parameters.Count != 2)
+            {
+                args.Player.SendErrorMessage("Invalid syntax! Proper syntax: /tpposnm <tile x> <tile y>");
+                return;
+            }
+
+            if (!int.TryParse(args.Parameters[0], out int x) || !int.TryParse(args.Parameters[1], out int y))
+            {
+                args.Player.SendErrorMessage("Invalid tile positions!");
+                return;
+            }
+            x = Math.Max(0, x);
+            y = Math.Max(0, y);
+            x = Math.Min(x, Main.maxTilesX - 1);
+            y = Math.Min(y, Main.maxTilesY - 1);
+
+            args.Player.Teleport(16 * x, 16 * y);
         }
     }
 }

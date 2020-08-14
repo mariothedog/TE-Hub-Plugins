@@ -55,8 +55,8 @@ namespace TEHub
             Commands.ChatCommands.Add(new Command("hub.player.help", HubCommands.HubHelp, "hubhelp") { HelpText = "Returns a list of all the TE Hub commands." });
 
             // Config
-            Commands.ChatCommands.Add(new Command("hub.admin.config.read", HubCommands.ReadConfig, "readconfig") { HelpText = "Reads the config." });
-            Commands.ChatCommands.Add(new Command("hub.admin.config.write", HubCommands.WriteConfig, "writeconfig") { HelpText = "Writes to the config." });
+            Commands.ChatCommands.Add(new Command("hub.admin.config.read", HubCommands.ReadConfig, "readconfig") { HelpText = "Reads the config and updates the in game variables." });
+            Commands.ChatCommands.Add(new Command("hub.admin.config.write", HubCommands.WriteConfig, "writeconfig") { HelpText = "Writes to the config using the in game variables." });
 
             // Join/Leave
             Commands.ChatCommands.Add(new Command("hub.player.event.join", HubCommands.JoinEvent, "join") { HelpText = "Join the event specified." });
@@ -87,6 +87,7 @@ namespace TEHub
             // Other
             Commands.ChatCommands.Add(new Command("hub.admin.util.getpos", HubCommands.GetPos, "getpos") { HelpText = "Returns your current position." });
             Commands.ChatCommands.Add(new Command("hub.admin.util.resetmap", HubCommands.ResetMap, "resetmap") { HelpText = "Resets the map of the event specified back to its original state." });
+            Commands.ChatCommands.Add(new Command("hub.admin.util.tppos.nomessage", HubCommands.TPPosNoMessage, "tpposnomessage") { HelpText = "Teleports you to the specified position without a success message." });
         }
 
         private void AddHooks()
@@ -129,6 +130,8 @@ namespace TEHub
                 GetDataHandlers.TileEdit -= HubHooks.OnTileEdit;
                 GetDataHandlers.ItemDrop -= HubHooks.OnItemDrop;
                 GetDataHandlers.ChestItemChange -= HubHooks.OnChestItemChange;
+                GetDataHandlers.PlayerSpawn -= HubHooks.OnPlayerSpawn;
+                GetDataHandlers.PlayerSlot -= HubHooks.OnPlayerSlot;
 
                 // Configs
                 HubConfig.config.Write(HubConfig.configPath);

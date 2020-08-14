@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TEHub.Configs;
+using TEHub.EventClasses;
 using TEHub.Extensions;
 using TEHub.Teams;
 using Terraria;
@@ -79,6 +80,7 @@ namespace TEHub
                 TSPlayer target = Util.spectatingPlayersToTargets[tSPlayer];
                 Vector2 position = target.TPlayer.position;
                 tSPlayer.TeleportNoDust(position);
+                tSPlayer.SendTileSquare((int)(position.X/16), (int)(position.Y/16));
             }
 
             // Call the GameUpdate method of each ongoing event
@@ -96,47 +98,6 @@ namespace TEHub
                     TShock.Utils.Broadcast("{0} has reached the minimum players to start!".SFormat(hubEvent.eventName), Color.Teal);
                     hubEvent.StartEventCountdown();
                 }
-            }
-        }
-
-        public static void OnPlayerSlot(object sender, GetDataHandlers.PlayerSlotEventArgs args)
-        {
-            TSPlayer tSPlayer = args.Player;
-            Player player = tSPlayer.TPlayer;
-
-            if (args.Type == ItemID.ObsidianHorseshoe)
-            {
-                if (args.Slot < NetItem.InventorySlots)
-                {
-                    player.inventory[args.Slot].netDefaults(0);
-                }
-                else if (args.Slot < NetItem.InventorySlots + NetItem.ArmorSlots)
-                {
-                    int index = args.Slot - NetItem.InventorySlots;
-                    player.armor[index].netDefaults(0);
-                }
-                else if (args.Slot < NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots)
-                {
-                    var index = args.Slot - (NetItem.InventorySlots + NetItem.ArmorSlots);
-                    player.dye[index].netDefaults(0);
-                }
-                else if (args.Slot < NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots)
-                {
-                    var index = args.Slot - (NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots);
-                    player.miscEquips[index].netDefaults(0);
-                }
-                else if (args.Slot < NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots + NetItem.MiscDyeSlots)
-                {
-                    var index = args.Slot - (NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots);
-                    player.miscDyes[index].netDefaults(0);
-                }
-                else if (args.Slot >= NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots + NetItem.MiscDyeSlots + NetItem.PiggySlots + NetItem.SafeSlots + NetItem.ForgeSlots)
-                {
-                    player.trashItem.netDefaults(0);
-                }
-                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, args.Slot);
-
-                tSPlayer.SetAccessory(0, ItemID.ObsidianHorseshoe, (int)Util.ItemPrefix.Lucky);
             }
         }
 
@@ -179,7 +140,7 @@ namespace TEHub
             TSPlayer tSPlayer = args.Player;
             int tileX = args.X;
             int tileY = args.Y;
-
+            
             HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer);
             if (hubEvent == null || hubEvent.unbreakableBlocks.Length == 0)
             {
@@ -202,11 +163,12 @@ namespace TEHub
             tSPlayer.SendTileSquare(tileX, tileY, 4);
             args.Handled = true;
 
-            tSPlayer.SendErrorMessage("You are not allowed to edit that block!");
+            // TODO: Send the error message only if the player's pickaxe would normally be able to mine the tile
+            //tSPlayer.SendErrorMessage("You are not allowed to edit that block!");
         }
 
-        #region Prevent Sharing/Disposing of Class Items
-        public static void OnItemDrop(object sender, GetDataHandlers.ItemDropEventArgs args) // TODO - Check if item is a class item
+        #region Prevent Sharing/Disposing of Class Items/Protected Items
+        public static void OnItemDrop(object sender, GetDataHandlers.ItemDropEventArgs args)
         {
             // Check if the player is picking up an item
             if (args.ID != 400)
@@ -214,18 +176,30 @@ namespace TEHub
                 return;
             }
 
-            args.Handled = true;
-
             TSPlayer tSPlayer = args.Player;
+
+            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer);
+            if (hubEvent != null && (!hubEvent.tSPlayersWithAClass.TryGetValue(tSPlayer.Name, out EventClass eventClass) || eventClass.HasItem(args.Type)))
+            {
+                return;
+            }
+
+            args.Handled = true;
 
             tSPlayer.GiveItem(args.Type, args.Stacks, args.Prefix);
 
             tSPlayer.SendErrorMessage("You are not allowed to drop that item!");
         }
 
-        public static void OnChestItemChange(object sender, GetDataHandlers.ChestItemEventArgs args) // TODO - Check if item is a class item
+        public static void OnChestItemChange(object sender, GetDataHandlers.ChestItemEventArgs args)
         {
             TSPlayer tSPlayer = args.Player;
+
+            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer);
+            if (!hubEvent.tSPlayersWithAClass.TryGetValue(tSPlayer.Name, out EventClass eventClass) || eventClass.HasItem(args.Type))
+            {
+                return;
+            }
 
             args.Handled = true;
 
@@ -235,7 +209,33 @@ namespace TEHub
 
             tSPlayer.GiveItem(args.Type, args.Stacks, args.Prefix);
 
-            tSPlayer.SendErrorMessage("You are not allowed to put that item in chests!");
+            tSPlayer.SendErrorMessage("You are not allowed to that item in chests!");
+        }
+
+        public static void OnPlayerSlot(object sender, GetDataHandlers.PlayerSlotEventArgs args)
+        {
+            TSPlayer tSPlayer = args.Player;
+
+            HubEvent hubEvent = HubEvent.GetEventPlayerIn(tSPlayer);
+
+            Player player = tSPlayer.TPlayer;
+
+            if (player.trashItem.netID > 0)
+            {
+                player.trashItem.netDefaults(0);
+
+                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index);
+
+                tSPlayer.GiveItem(args.Type, args.Stack, args.Prefix);
+            }
+            else if ((hubEvent == null || !hubEvent.started) && args.Type == ItemID.ObsidianHorseshoe)
+            {
+                Util.PerformActionOnItemInSlot(player, args.Slot, (item) => item.netDefaults(0));
+
+                NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, args.Slot);
+
+                tSPlayer.SetAccessory(0, ItemID.ObsidianHorseshoe, (int)Util.ItemPrefix.Lucky);
+            }
         }
         #endregion
     }

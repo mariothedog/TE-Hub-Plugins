@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using System;
 using Terraria;
 using Terraria.Localization;
 using TShockAPI;
@@ -232,6 +233,8 @@ namespace TEHub.Extensions
         // TODO - Make this work for any slot
         public static void SetAccessory(this TSPlayer tSPlayer, int slot, int itemID, byte prefix = (byte)Util.ItemPrefix.None, int stack = 1)
         {
+            Console.WriteLine("e");
+
             Player player = tSPlayer.TPlayer;
 
             Item item = TShock.Utils.GetItemById(itemID);

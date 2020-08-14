@@ -34,7 +34,7 @@ namespace TEHub
         [JsonIgnore]
         public bool canChooseClasses = true;
         [JsonIgnore]
-        public Dictionary<TSPlayer, EventClass> tSPlayersWithAClass = new Dictionary<TSPlayer, EventClass>();
+        public Dictionary<string, EventClass> tSPlayersWithAClass = new Dictionary<string, EventClass>();
 
         readonly public int
             minPlayersForStart,
@@ -107,36 +107,83 @@ namespace TEHub
             started = true;
             ongoingCountdown = false;
 
-            int teamIndex = 0;
             foreach (TSPlayer tSPlayer in tSPlayers)
             {
                 // Give classes to those who didn't pick one in time
-                if (!tSPlayersWithAClass.Keys.Contains(tSPlayer))
+                if (!tSPlayersWithAClass.Keys.Contains(tSPlayer.Name))
                 {
                     EventClass eventClass = Util.GetRandomClass(eventName);
-                    tSPlayersWithAClass[tSPlayer] = eventClass;
+                    tSPlayersWithAClass[tSPlayer.Name] = eventClass;
+                    Util.DebugStuff(this);
 
                     tSPlayer.SendInfoMessage("You were given the random class of {0} as you did not pick one in time.".SFormat(eventClass.className));
                 }
 
-                // Assign teams if the event has teams
-                if (teams.Length > 0)
-                {
-                    if (GetTeamPlayerIn(tSPlayer) == null) // If the player is already in a team, then skip over them
-                    {
-                        teams[teamIndex].AddToTeam(tSPlayer);
-                    }
-
-                    teamIndex = (teamIndex + 1) % teams.Length;
-                }
-
-                TeleportToBase(tSPlayer);
                 tSPlayer.ForcePvP(true);
             }
 
-            foreach (KeyValuePair<TSPlayer, EventClass> tSPlayerWithAClass in tSPlayersWithAClass)
+            // Assign teams if the event has teams
+            if (teams.Length > 1)
             {
-                Util.GiveClass(tSPlayerWithAClass.Key, tSPlayerWithAClass.Value);
+                List<TSPlayer> tSPlayersAlreadyInATeam = new List<TSPlayer>();
+                foreach (EventTeam eventTeam in teams)
+                {
+                    foreach (TSPlayer tSPlayer in eventTeam.tSPlayers)
+                    {
+                        tSPlayersAlreadyInATeam.Add(tSPlayer);
+
+                        TeleportToBase(tSPlayer);
+                    }
+                }
+
+                List<TSPlayer> tSPlayersWithoutATeam = tSPlayers.Except(tSPlayersAlreadyInATeam).ToList();
+
+                // Note that the minPlayersInTeam variable is an integer so the value of the division will be truncated
+                int minPlayersInTeam = tSPlayers.Count() / teams.Length;
+
+                foreach (EventTeam eventTeam in teams)
+                {
+                    while (eventTeam.tSPlayers.Count() < minPlayersInTeam)
+                    {
+                        TSPlayer tSPlayer = tSPlayersWithoutATeam[Plugin.UnifiedRandom.Next(tSPlayersWithoutATeam.Count())];
+                        eventTeam.AddToTeam(tSPlayer);
+                        tSPlayersWithoutATeam.Remove(tSPlayer);
+
+                        TeleportToBase(tSPlayer);
+                    }
+                }
+
+                foreach (EventTeam eventTeam in teams.OrderBy(k => Plugin.UnifiedRandom.Next()))
+                {
+                    if (tSPlayersWithoutATeam.Count() == 0)
+                    {
+                        break;
+                    }
+
+                    TSPlayer tSPlayer = tSPlayersWithoutATeam[0];
+                    eventTeam.AddToTeam(tSPlayer);
+                    tSPlayersWithoutATeam.RemoveAt(0);
+
+                    TeleportToBase(tSPlayer);
+                }
+            }
+            else if (teams.Length == 1)
+            {
+                EventTeam eventTeam = teams[0];
+
+                foreach (TSPlayer tSPlayer in tSPlayers)
+                {
+                    if (GetTeamPlayerIn(tSPlayer) == null)
+                    {
+                        eventTeam.AddToTeam(tSPlayer);
+                    }
+                }
+            }
+
+            foreach (KeyValuePair<string, EventClass> tSPlayerWithAClass in tSPlayersWithAClass)
+            {
+                TSPlayer tSPlayer = TSPlayer.FindByNameOrID(tSPlayerWithAClass.Key).First(); // This .First() may cause some issues
+                Util.GiveClass(tSPlayer, tSPlayerWithAClass.Value);
             }
 
             canChooseClasses = false;
@@ -177,6 +224,12 @@ namespace TEHub
 
             Wiring.HitSwitch(mapInfo.switchTileX, mapInfo.switchTileY);
             NetMessage.SendData((int)PacketTypes.HitSwitch, -1, -1, NetworkText.Empty, mapInfo.switchTileX, mapInfo.switchTileY);
+
+            if (mapInfo.name == "Caverns")
+            {
+                Wiring.HitSwitch(6586, 422);
+                TShock.Utils.Broadcast("The lava has started flowing!", Color.Orange);
+            }
         }
 
         public void UnlockRandomMap()
@@ -327,16 +380,19 @@ namespace TEHub
         public void ResetEvent()
         {
             resetPending = false;
-
             started = false;
-            foreach (TSPlayer participatingTSPlayer in tSPlayers)
+
+            // Remove all players who have left the server
+            tSPlayers.RemoveAll(tSP => tSP == null || !tSP.Active);
+
+            foreach (TSPlayer tSPlayer in tSPlayers)
             {
-                if (participatingTSPlayer == null || !participatingTSPlayer.Active || participatingTSPlayer.Dead)
+                if (tSPlayer.Dead)
                 {
                     continue;
                 }
 
-                participatingTSPlayer.ResetPlayer();
+                tSPlayer.ResetPlayer();
             }
 
             tSPlayersWithAClass.Clear();
@@ -360,6 +416,15 @@ namespace TEHub
                 {
                     Main.item[i].active = false;
                     TSPlayer.All.SendData(PacketTypes.ItemDrop, "", i);
+                }
+            }
+
+            for (int i = 0; i < Main.maxProjectiles; i++) // Clear all projectiles
+            {
+                if (Main.projectile[i].active)
+                {
+                    Main.projectile[i].active = false;
+                    TSPlayer.All.SendData(PacketTypes.ProjectileDestroy, "", i);
                 }
             }
 

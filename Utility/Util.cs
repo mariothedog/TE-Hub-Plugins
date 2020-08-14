@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using TEHub.Configs;
 using TEHub.EventClasses;
@@ -63,6 +64,7 @@ namespace TEHub
             Pink
         }
 
+        #region Classes
         public static EventClass GetRandomClass(string eventName)
         {
             List<EventClass> eventClasses = ClassConfig.config.eventClasses[eventName];
@@ -224,6 +226,80 @@ namespace TEHub
                 player.miscDyes[i] = item;
                 NetMessage.SendData((int)PacketTypes.PlayerSlot, -1, -1, NetworkText.Empty, tSPlayer.Index, (int)ItemSlot.DyeEquipmentSlot1 + i);
             }
+        }
+        #endregion
+
+        public static void PerformActionOnItemInSlot(Player player, int slot, Action<Item> action)
+        {
+            if (slot < NetItem.InventorySlots)
+            {
+                action(player.inventory[slot]);
+            }
+            else if (slot < NetItem.InventorySlots + NetItem.ArmorSlots)
+            {
+                int index = slot - NetItem.InventorySlots;
+                action(player.inventory[index]);
+            }
+            else if (slot < NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots)
+            {
+                var index = slot - (NetItem.InventorySlots + NetItem.ArmorSlots);
+                action(player.inventory[index]);
+            }
+            else if (slot < NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots)
+            {
+                var index = slot - (NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots);
+                action(player.inventory[index]);
+            }
+            else if (slot < NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots + NetItem.MiscDyeSlots)
+            {
+                var index = slot - (NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots);
+                action(player.inventory[index]);
+            }
+            else if (slot >= NetItem.InventorySlots + NetItem.ArmorSlots + NetItem.DyeSlots + NetItem.MiscEquipSlots + NetItem.MiscDyeSlots + NetItem.PiggySlots + NetItem.SafeSlots + NetItem.ForgeSlots)
+            {
+                action(player.trashItem);
+            }
+        }
+
+        public static bool HasItem(this EventClass eventClass, int type)
+        {
+            List<string> itemNames = eventClass.accessories.Values
+                .Concat(eventClass.accessoryDyes.Values).ToList()
+                .Concat(eventClass.accessoryVanity.Values).ToList()
+                .Concat(eventClass.armor.Values).ToList()
+                .Concat(eventClass.armorDyes.Values).ToList()
+                .Concat(eventClass.armorVanity.Values).ToList()
+                .Concat(eventClass.miscEquipDyes.Values).ToList()
+                .Concat(eventClass.miscEquips.Values).ToList()
+                .Concat(eventClass.ammo.Values.Select(i => i.name)).ToList()
+                .Concat(eventClass.coins.Values.Select(i => i.name)).ToList()
+                .Concat(eventClass.items.Values.Select(i => i.name)).ToList();
+
+            var allItemIDs = itemNames.Select(i => TShock.Utils.GetItemByIdOrName(i).First().netID);
+
+            return allItemIDs.Contains(type);
+        }
+
+        public static void DebugStuff(HubEvent hubEvent)
+        {
+            string o = hubEvent.eventName;
+            foreach (KeyValuePair<string, EventClass> keyValuePair in hubEvent.tSPlayersWithAClass)
+            {
+                o += "{0} - {1}".SFormat(keyValuePair.Key, keyValuePair.Value);
+            }
+
+            Console.WriteLine(o);
+            TShock.Log.ConsoleDebug(o);
+            TShock.Log.ConsoleError(o);
+            TShock.Log.ConsoleInfo(o);
+        }
+
+        public static void DebugThing(string test)
+        {
+            Console.WriteLine(test);
+            TShock.Log.ConsoleDebug(test);
+            TShock.Log.ConsoleError(test);
+            TShock.Log.ConsoleInfo(test);
         }
     }
 }
